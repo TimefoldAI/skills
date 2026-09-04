@@ -175,11 +175,13 @@ Only reached when the user asked for one of these formats in Step 0b (or in thei
 The Markdown assembled in Steps 1-3 (title, metadata block, findings, footer) is the source content; these
 formats are alternate renderings of the same report, not a different report.
 
-1. **Check for Timefold branding.** This plugin ships no branding assets. If a `brand-guidelines` or
-   `logo` skill is reachable in the environment, use it to style the output (brand colors and typography,
-   the official logo on a cover page or header). Otherwise say so plainly to the user (e.g. "I have no
-   Timefold branding assets available, so this will be an unbranded report") and proceed with a plain,
-   unbranded version. Never draw or approximate the logo.
+1. **Check for Timefold branding.** Use the `brand-guidelines` and `timefold-logo` skills, which ship
+   next to this one in the same plugin, to style the output (brand colors and typography from
+   `brand-guidelines`, the official logo from `timefold-logo` placed on a cover page or header). Read
+   `../brand-guidelines/SKILL.md` and `../timefold-logo/SKILL.md` if they aren't already loaded. If you
+   genuinely cannot reach them, say so plainly to the user (e.g. "I couldn't find the branding skills, so
+   this will be an unbranded report") and proceed with a plain, unbranded version. Never draw or
+   approximate the logo.
 2. **PDF or Word (.docx):** convert the assembled Markdown using the tools available in the environment (e.g.
    `pandoc`). Apply the brand colors/typography and logo from step 1 as a style/reference-doc if that path is
    supported; otherwise ship the plain conversion and note the limitation. Save the output alongside (or

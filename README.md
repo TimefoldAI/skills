@@ -16,6 +16,8 @@ these skills work in Claude Code, Cursor, Codex, GitHub Copilot and many other a
 | [`explain-dataset-shared`](./skills/explain-dataset-shared) | The model-agnostic workflow and the Python scripts. The three skills above read it. Do not invoke it directly. |
 | [`language-guidelines`](./skills/language-guidelines) | Timefold's language rules and terminology. The report prose follows them. |
 | [`timefold-write-report`](./skills/timefold-write-report) | How a report is assembled, where it is saved, and which formats are available. |
+| [`brand-guidelines`](./skills/brand-guidelines) | Timefold's brand colors and typography, for branded reports and for UI work. |
+| [`timefold-logo`](./skills/timefold-logo) | The official Timefold logo files. Never draw or approximate the logo. |
 
 The `explain-dataset` skills answer questions about a dataset that Timefold has optimized:
 
@@ -91,6 +93,9 @@ skills/
     scripts/           # Python helpers that call the Timefold API
   language-guidelines/
   timefold-write-report/
+  brand-guidelines/
+  timefold-logo/
+    assets/            # official logo files, SVG and PNG
 ```
 
 ## Versioning
@@ -113,4 +118,9 @@ model-agnostic.
 
 ## License
 
-[Apache License 2.0](./LICENSE)
+The skills, the scripts and the documentation are under the
+[Apache License 2.0](./LICENSE).
+
+The logo files in `skills/timefold-logo/assets/` are trademarks of Timefold BV. The license above
+does not grant you a right to use them. Use them only to represent Timefold, and do not modify
+them.
