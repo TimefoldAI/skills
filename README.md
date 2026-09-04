@@ -35,7 +35,7 @@ The skill reads the dataset through the Timefold API. It does not change your da
 
 ```bash
 claude plugin marketplace add TimefoldAI/skills
-claude plugin install skills@timefold
+claude plugin install timefold-skills@timefold
 ```
 
 ### Other agents
