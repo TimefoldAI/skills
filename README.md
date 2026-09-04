@@ -14,6 +14,8 @@ these skills work in Claude Code, Cursor, Codex, GitHub Copilot and many other a
 | [`explain-dataset-fsr`](./skills/explain-dataset-fsr) | Explain an optimized dataset of the Field Service Routing model |
 | [`explain-dataset-pdr`](./skills/explain-dataset-pdr) | Explain an optimized dataset of the Pick-up and Delivery Routing model |
 | [`explain-dataset-shared`](./skills/explain-dataset-shared) | The model-agnostic workflow and the Python scripts. The three skills above read it. Do not invoke it directly. |
+| [`language-guidelines`](./skills/language-guidelines) | Timefold's language rules and terminology. The report prose follows them. |
+| [`timefold-write-report`](./skills/timefold-write-report) | How a report is assembled, where it is saved, and which formats are available. |
 
 The `explain-dataset` skills answer questions about a dataset that Timefold has optimized:
 
@@ -77,6 +79,8 @@ The agent selects the skill for your model, collects the data, and writes a repo
 .claude-plugin/
   plugin.json          # plugin manifest for Claude Code
   marketplace.json     # makes this repository a Claude Code marketplace
+.github/workflows/
+  bump-plugin-version.yml   # bumps the minor version when the skills change
 skills/
   explain-dataset-ess/
   explain-dataset-fsr/
@@ -85,7 +89,15 @@ skills/
     SKILL.md
     references/        # loaded on demand
     scripts/           # Python helpers that call the Timefold API
+  language-guidelines/
+  timefold-write-report/
 ```
+
+## Versioning
+
+The plugin version follows semantic versioning. A GitHub Actions workflow bumps the minor
+version each time the skills change on `main`. Claude uses that version to find out that the
+plugin must be reloaded, so do not remove the bump.
 
 ## Documentation
 

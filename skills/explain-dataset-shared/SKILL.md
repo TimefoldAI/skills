@@ -19,15 +19,15 @@ When instructions below say "work item" or "resource", substitute the model-spec
 
 Everything you write for the user (the chat summary, bottleneck descriptions and proposals,
 the coverage headline, the deep-dive offer, and any prose in the written report) should follow
-the `language-guidelines` skill (from the `timefold-technical-writing` plugin): US English,
-active voice, no em dashes, contractions welcome but not required, serial commas, numbers one
-through ten spelled out, and so on. Don't restate those rules here; just apply them.
+the `language-guidelines` skill: US English, active voice, no em dashes, contractions welcome but
+not required, serial commas, numbers one through ten spelled out, and so on. Don't restate those
+rules here; just apply them.
 
-`timefold-technical-writing` is a separate plugin. If it isn't installed in the
-current environment, don't silently skip this or guess at the rules. Tell the user once, early
-in the conversation: "I couldn't find the `timefold-technical-writing` plugin, so this report
-won't follow Timefold's language guidelines automatically." Then proceed with plain, clear
-writing on your own judgment.
+`language-guidelines` ships in this plugin, next to this skill. Read
+`../language-guidelines/SKILL.md` if it isn't already loaded. If you genuinely cannot reach it,
+don't silently skip this or guess at the rules. Tell the user once, early in the conversation:
+"I couldn't find the `language-guidelines` skill, so this report won't follow Timefold's language
+guidelines automatically." Then proceed with plain, clear writing on your own judgment.
 
 ## Environment: scripts vs. direct API calls
 
@@ -226,15 +226,14 @@ Frame results in operational terms:
 ### Write the report
 
 `explain-dataset` owns the report's *findings* below; everything about *how* the report gets
-assembled, presented, and saved is delegated to the `timefold-write-report` skill (from the
-`timefold-technical-writing` plugin, read
-`plugins/shared/technical-writing/skills/timefold-write-report/SKILL.md` if it isn't already
-loaded). That skill decides save-vs-chat, offers richer formats, assembles the metadata block,
-adds the footer, and places the file. Apply its conventions on top of the findings structure
-below rather than reinventing any of that here.
+assembled, presented, and saved is delegated to the `timefold-write-report` skill (read
+`../timefold-write-report/SKILL.md` if it isn't already loaded). That skill decides
+save-vs-chat, offers richer formats, assembles the metadata block, adds the footer, and places
+the file. Apply its conventions on top of the findings structure below rather than reinventing
+any of that here.
 
-`timefold-technical-writing` is a separate plugin. If `timefold-write-report`
-isn't available in the current environment, tell the user once: "I couldn't find the
+`timefold-write-report` ships in this plugin, next to this skill. If you genuinely cannot reach
+it, tell the user once: "I couldn't find the
 `timefold-write-report` skill, so I'll assemble and save this report myself instead." Then fall
 back to writing a plain report yourself: a title, a short metadata block (run date and time,
 tenant, dataset, requested scope), the findings content below, and a one-line footer noting which
