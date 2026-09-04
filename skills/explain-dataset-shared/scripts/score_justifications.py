@@ -16,11 +16,12 @@ Additional filters (combinable):
 Usage:
     python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID
     python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID --samples 5 --type hard
-    python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID --resource "Hamadi-EZZINE"
-    python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID --resource "295" --type hard
-    python score_justifications.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --resource "Alice"
+    python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID --resource "VAN-12"
+    python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID --resource "TRK-07" --type hard
+    python score_justifications.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --resource "EMP-001"
     TIMEFOLD_API_KEY=KEY python score_justifications.py --model field-service-routing --dataset-id ID --resource "VAN-12"
 """
+
 import argparse
 import os
 import sys
@@ -28,8 +29,15 @@ import sys
 _DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _DIR)
 
-from timefold_api import model_api_get, parse_score, score_sort_key, constraint_type, add_common_args, resolve_args
 from model_config import get_config
+from timefold_api import (
+    add_common_args,
+    constraint_type,
+    model_api_get,
+    parse_score,
+    resolve_args,
+    score_sort_key,
+)
 
 
 def _contains_resource(value, resource_lower):
@@ -65,20 +73,26 @@ def main():
     )
     add_common_args(p)
     p.add_argument(
-        "--samples", type=int, default=3,
+        "--samples",
+        type=int,
+        default=3,
         help="Max justifications to show per constraint in sample mode (default: 3; ignored when --resource is set)",
     )
     p.add_argument(
-        "--resource", metavar="NAME",
+        "--resource",
+        metavar="NAME",
         help="Show all justifications that mention this resource. Substring match, case-insensitive. "
-             "FSR: vehicle shift ID (e.g. '295-Hamadi-EZZINE'). ESS: employee name. PDR: driver shift ID.",
+        "FSR: vehicle shift ID. ESS: employee name. PDR: driver shift ID.",
     )
     p.add_argument(
-        "--type", choices=["hard", "medium", "soft", "all"], default="all",
+        "--type",
+        choices=["hard", "medium", "soft", "all"],
+        default="all",
         help="Filter by constraint tier (default: all violated constraints)",
     )
     p.add_argument(
-        "--constraint", metavar="NAME",
+        "--constraint",
+        metavar="NAME",
         help="Restrict to one constraint by name (substring match)",
     )
     args = p.parse_args()
@@ -90,7 +104,9 @@ def main():
 
     print(f"Fetching score analysis with justifications for {did}...")
     score_data = model_api_get(
-        base, f"{cp}/{did}/score-analysis", key,
+        base,
+        f"{cp}/{did}/score-analysis",
+        key,
         params={"includeJustifications": "true"},
     )
 
@@ -131,14 +147,17 @@ def main():
             continue
 
         if mode == "resource":
-            display = [m for m in all_matches
-                       if _contains_resource(m.get("justification", {}), resource_lower)]
+            display = [
+                m
+                for m in all_matches
+                if _contains_resource(m.get("justification", {}), resource_lower)
+            ]
             if not display:
                 continue
             omitted = 0
             count_note = f"{len(display)} match(es) for this {resource_label}"
         else:
-            display = all_matches[:args.samples]
+            display = all_matches[: args.samples]
             omitted = len(all_matches) - len(display)
             count_note = f"showing {len(display)} of {len(all_matches)}"
 
@@ -156,13 +175,15 @@ def main():
             print(f"    • {line}")
 
         if omitted > 0:
-            print(f"    … {omitted} more — use --constraint \"{c['name']}\" to see all.")
+            print(f'    … {omitted} more — use --constraint "{c["name"]}" to see all.')
         print()
         total_shown += len(display)
 
     if mode == "resource" and total_shown == 0:
         print(f"No justifications mention '{args.resource}'.")
-        print(f"Tip: use a shorter substring of the {resource_label} ID (e.g. just the surname or shift date).")
+        print(
+            f"Tip: use a shorter substring of the {resource_label} ID (e.g. just the surname or shift date)."
+        )
 
 
 if __name__ == "__main__":

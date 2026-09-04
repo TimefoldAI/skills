@@ -12,7 +12,7 @@ printed at the end of every run ("Available --sort values: ...").
 
 Usage:
     python resource_metrics.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --sort overtime
-    python resource_metrics.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --filter "Gus"
+    python resource_metrics.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --filter "EMP-001"
     TIMEFOLD_API_KEY=KEY python resource_metrics.py --model employee-shift-scheduling --dataset-id ID
 """
 import argparse

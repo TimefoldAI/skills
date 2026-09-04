@@ -109,7 +109,7 @@ section:
 ```markdown
 ## Report metadata
 - **Run date:** 2026-07-16 11:23 CEST
-- **Run by:** jurriaan@timefold.ai (MacBook-Air.local)
+- **Run by:** you@example.com (your-machine)
 - **Source repository:** org/repo (branch `branch-name`, commit `abc1234`)
 - **Skill plugin version:** plugin-name vX.Y.Z (`skill-name` skill)
 - **Requested scope:** ...

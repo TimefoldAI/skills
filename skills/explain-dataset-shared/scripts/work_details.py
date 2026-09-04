@@ -9,10 +9,10 @@ For pickup-delivery-routing: looks up jobs — shows stops and priority; assignm
 
 Usage:
     python work_details.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --work-ids ID1 ID2
-    python work_details.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --resource "Gus Li"
+    python work_details.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --resource "EMP-001"
     python work_details.py --model field-service-routing --api-key KEY --dataset-id ID --work-ids "visit-001"
     python work_details.py --model pickup-delivery-routing --api-key KEY --dataset-id ID --work-ids "job-001"
-    TIMEFOLD_API_KEY=KEY python work_details.py --model employee-shift-scheduling --dataset-id ID --work-ids "Mon_M_Surgery"
+    TIMEFOLD_API_KEY=KEY python work_details.py --model employee-shift-scheduling --dataset-id ID --work-ids "shift-001"
 """
 import argparse
 import os
