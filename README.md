@@ -1,10 +1,11 @@
 # Timefold Skills
 
-Agent Skills for users of [Timefold](https://timefold.ai) models.
+Agent Skills for users of [Timefold](https://timefold.ai) models, and the supporting skills
+they build on.
 
 A skill is a folder with a `SKILL.md` file. It gives an AI coding agent the instructions,
-reference material and scripts it needs for one task. Agent Skills is an open standard, so
-these skills work in Claude Code, Cursor, Codex, GitHub Copilot and many other agents.
+reference material, and scripts it needs for one task. Agent Skills is an open standard, so
+these skills work in Claude Code, Cursor, Codex, GitHub Copilot, and many other agents.
 
 ## Skills in this repository
 
@@ -22,12 +23,14 @@ these skills work in Claude Code, Cursor, Codex, GitHub Copilot and many other a
 The `explain-dataset` skills answer questions about a dataset that Timefold has optimized:
 
 - Why is this work item unassigned?
-- Why did the solver assign this resource to this work item?
+- Why did the model assign this resource to this work item?
 - Where are the coverage gaps and the bottlenecks?
 - What does this score mean?
 - What can I change to get a better plan?
 
-The skill reads the dataset through the Timefold API. It does not change your data.
+The skills reach your dataset through the Timefold API. They only read it. The recommendation
+call sends a request body, but it asks the model what an assignment would cost. It does not
+change your dataset.
 
 ## Installation
 
@@ -53,10 +56,10 @@ install for all your projects.
   [API usage](https://docs.timefold.ai/timefold-platform/latest/api/api-usage). You find your
   tenant ID under
   [Tenant details](https://docs.timefold.ai/timefold-platform/latest/how-tos/tenant-details).
-- Python 3.9 or later, and the `requests` package: `pip install requests`.
+- Python 3 and the `requests` package: `pip install requests`.
 
 The scripts read these environment variables, so you do not have to pass the values on each
-command:
+command. The dataset ID, the model, and the model API URL stay on the command line.
 
 | Variable | Purpose |
 |---|---|
@@ -118,7 +121,7 @@ model-agnostic.
 
 ## License
 
-The skills, the scripts and the documentation are under the
+The skills, the scripts, and the documentation are under the
 [Apache License 2.0](./LICENSE).
 
 The logo files in `skills/timefold-logo/assets/` are trademarks of Timefold BV. The license above
