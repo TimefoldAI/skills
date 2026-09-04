@@ -6,7 +6,7 @@
   },
   "plugins": [
     {
-      "name": "timefold-skills",
+      "name": "skills",
       "source": "./",
       "description": "Skills for users of Timefold models: explain an optimized dataset, find out why work is unassigned, and interpret the optimization decisions."
     }
