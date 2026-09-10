@@ -121,8 +121,9 @@ plugin must be reloaded, so do not remove the bump.
 
 ## Contributing
 
-Open an issue or a pull request. Keep each skill self-contained, and keep the shared workflow
-model-agnostic.
+We do not accept code contributions to this repository at this time, and forking is disabled.
+Bug reports and requests are welcome as [issues](https://github.com/TimefoldAI/skills/issues).
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
