@@ -321,18 +321,18 @@ def _add_platform_url_arg(parser):
 
 
 def add_common_args(parser):
-    """Add --model-api-url (required), --platform-url, --api-key, --dataset-id, --model, --tenant."""
+    """Add --model-api-url (required), --platform-url, --dataset-id, --model, --tenant.
+
+    There is deliberately no --api-key argument. The key is read from the
+    TIMEFOLD_API_KEY environment variable only, so it never appears in a command line,
+    in a shell history, or in the context of an agent that runs these scripts.
+    """
     parser.add_argument(
         "--model-api-url",
         required=True,
         help="Model API base URL, e.g. https://app.timefold.ai/api/models/employee-scheduling/v1",
     )
     _add_platform_url_arg(parser)
-    parser.add_argument(
-        "--api-key",
-        default=os.environ.get("TIMEFOLD_API_KEY"),
-        help="Timefold API key (or set TIMEFOLD_API_KEY env var)",
-    )
     parser.add_argument("--dataset-id", required=True, help="Dataset / run ID to analyse")
     from model_config import MODEL_CONFIGS  # deferred: relies on the caller's sys.path setup
     parser.add_argument(
@@ -351,9 +351,19 @@ def add_common_args(parser):
 
 
 def resolve_args(args):
-    """Validate parsed args and return (model_api_url, api_key, dataset_id, platform_base). Exits on errors."""
-    if not args.api_key:
-        sys.exit("Error: provide --api-key or set TIMEFOLD_API_KEY")
+    """Validate parsed args and return (model_api_url, api_key, dataset_id, platform_base). Exits on errors.
+
+    The API key comes from the environment, never from an argument. See add_common_args.
+    """
+    api_key = os.environ.get("TIMEFOLD_API_KEY")
+    if not api_key:
+        sys.exit(
+            "Error: TIMEFOLD_API_KEY is not set.\n"
+            "Export it in your own shell before you run this script:\n"
+            "    export TIMEFOLD_API_KEY=<your-api-key>\n"
+            "The scripts read the key from the environment only. They accept no --api-key argument, "
+            "so the key stays out of your command line and out of your shell history."
+        )
     if not args.model_api_url:
         sys.exit("Error: provide --model-api-url (model API base URL)")
-    return args.model_api_url, args.api_key, args.dataset_id, args.platform_url.rstrip("/")
+    return args.model_api_url, api_key, args.dataset_id, args.platform_url.rstrip("/")

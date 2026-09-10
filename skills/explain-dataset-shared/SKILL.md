@@ -64,20 +64,22 @@ Require `pip install requests`.
 
 ```bash
 SCRIPTS=scripts
-python $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--tenant ID]
-python $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--recommendations]
-python $SCRIPTS/resource_metrics.py      --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--sort overtime]
-python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --work-ids ID1 ID2
-python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --resource "Name"
-python $SCRIPTS/score_violations.py      --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--type hard]
-python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--samples 3]
-python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --resource "Name"
+python $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--tenant ID]
+python $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--recommendations]
+python $SCRIPTS/resource_metrics.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--sort overtime]
+python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --work-ids ID1 ID2
+python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "Name"
+python $SCRIPTS/score_violations.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--type hard]
+python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--samples 3]
+python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "Name"
 ```
 
 ## Step 1: Gather credentials
 
 You need three things:
-- **API token**: an API key with Read permission on the model
+- **API key**: an API key with Read permission on the model, exported as `TIMEFOLD_API_KEY` in the
+  environment the scripts run in. You never handle the key yourself. See
+  "The API key stays out of the conversation" below.
 - **Dataset ID**: the ID of an already-submitted (ideally solved) dataset
 - **Tenant ID**: the UUID that identifies your Timefold tenant (the path segment after the
   domain, e.g. `00000000-0000-0000-0000-000000000000` in
@@ -104,7 +106,9 @@ it applies before proceeding:
 Never generate a report without a confirmed tenant. The tenant goes in the filename and in the
 report header.
 
-### Getting an API token
+### Getting an API key
+
+Tell the user to do this themselves. Don't offer to do it for them.
 
 1. Log in at [app.timefold.ai](https://app.timefold.ai)
 2. Dropdown next to your username → **Manage tenant** → **API Keys**
@@ -113,19 +117,41 @@ report header.
 
 Full guide: [API usage](https://docs.timefold.ai/timefold-platform/latest/api/api-usage)
 
-### Handling the API token
+### The API key stays out of the conversation
 
-- **Never write the API token anywhere it would outlive this conversation**, not to the
-  report file, not to any config or memory file, not to logs. It is only ever passed as a
-  `--api-key` argument or `TIMEFOLD_API_KEY` env var for the current script call.
-- **Never persist the token across sessions.** Ask for it fresh at the start of each new
-  conversation. Do not carry it over from memory or from a prior session.
-- **Reusing the token for multiple datasets within the same conversation is fine** once the
-  user has supplied it (e.g. "now check dataset X too"), but always re-confirm the tenant
-  still applies (see above), and never fetch a different tenant's data on the assumption that
-  the same token grants access there.
-- When writing Appendix B's API audit log, omit auth headers entirely (see below). The token
-  must never appear in any written output.
+The scripts read the key from the `TIMEFOLD_API_KEY` environment variable, and they accept no
+`--api-key` argument. That is deliberate. A key on a command line lands in your context, in the
+transcript, and in the shell history, and a key that reaches your context can leak from there into
+a report, a log, or a later summary. The safest key is the one you never see.
+
+So:
+
+- **Never ask the user to paste the key into the chat**, and never put it in a command you run.
+  If the user pastes it anyway, tell them once that you cannot remove it from the transcript, and
+  recommend they revoke that key under **Manage tenant** → **API Keys** and issue a new one.
+- **Check whether the key is set** before you run anything, and check it without printing it:
+  ```bash
+  [ -n "${TIMEFOLD_API_KEY:-}" ] && echo "TIMEFOLD_API_KEY is set" || echo "TIMEFOLD_API_KEY is missing"
+  ```
+- **If it's missing, ask the user to export it in their own shell**, then start the agent session
+  again from that same shell so the scripts inherit it:
+  ```bash
+  export TIMEFOLD_API_KEY=<your-api-key>
+  ```
+  Exporting it from inside the session does not help. Each command you run gets a fresh shell, so
+  the value would not survive to the next call, and it would sit in the transcript besides. A shell
+  profile or a secret manager is the right home for it. A checked-in config file is not.
+- **Never write the key anywhere it would outlive the run**, not to the report file, not to a
+  config or memory file, not to logs, and not to a memory you keep between sessions.
+- **The same key covers more datasets in the same conversation**, but always re-confirm the tenant
+  still applies (see above). Never fetch another tenant's data on the assumption that the same key
+  grants access there.
+- When writing Appendix B's API audit log, omit auth headers entirely (see below). The key must
+  never appear in any written output.
+
+`TIMEFOLD_TENANT` and `TIMEFOLD_PLATFORM_URL` work the same way, and the scripts read them from the
+environment too. Neither is a secret, so passing `--tenant` or `--platform-url` on the command line
+is fine when the user gives you those values in the conversation.
 
 ### Platform links
 
@@ -143,7 +169,7 @@ Always include these at the top of the report.
 Always start here. It fetches everything needed for the initial overview in one call.
 
 ```bash
-python $SCRIPTS/summarize.py --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID
+python $SCRIPTS/summarize.py --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID
 ```
 
 ## Step 3: Present the initial summary

@@ -7,12 +7,14 @@ For employee-shift-scheduling: looks up shifts — shows time, skills, location;
 For field-service-routing: looks up visits — shows service duration, time windows, skills; reports which vehicle/shift.
 For pickup-delivery-routing: looks up jobs — shows stops and priority; assignment lookup not available (use platform Visualization).
 
+Reads the API key from the TIMEFOLD_API_KEY environment variable. It accepts no --api-key
+argument, so the key stays out of the command line.
+
 Usage:
-    python work_details.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --work-ids ID1 ID2
-    python work_details.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --resource "EMP-001"
-    python work_details.py --model field-service-routing --api-key KEY --dataset-id ID --work-ids "visit-001"
-    python work_details.py --model pickup-delivery-routing --api-key KEY --dataset-id ID --work-ids "job-001"
-    TIMEFOLD_API_KEY=KEY python work_details.py --model employee-shift-scheduling --dataset-id ID --work-ids "shift-001"
+    python work_details.py --model employee-shift-scheduling --dataset-id ID --work-ids ID1 ID2
+    python work_details.py --model employee-shift-scheduling --dataset-id ID --resource "EMP-001"
+    python work_details.py --model field-service-routing --dataset-id ID --work-ids "visit-001"
+    python work_details.py --model pickup-delivery-routing --dataset-id ID --work-ids "job-001"
 """
 import argparse
 import os

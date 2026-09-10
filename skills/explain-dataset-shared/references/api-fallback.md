@@ -8,6 +8,17 @@ All endpoints below are **Model API** endpoints, authenticated with `X-API-KEY: 
 This is distinct from the Platform API (used for configuration management), which requires a
 Bearer personal access token. For this skill you only need the Model API key.
 
+**This mode cannot keep the key out of the conversation.** Without Bash there is no environment
+variable to read it from, so the user has to give you the key and you have to put it in a request
+header. Say so before you ask for it:
+
+> "Without a shell I have to call the API directly, which means the key passes through this
+> conversation and stays in the transcript. If that's a problem, run this skill in Claude Code
+> instead, where the scripts read the key from your environment and I never see it. Otherwise,
+> use a key with Read permission only and revoke it when we're done."
+
+Never echo the key back, and never write it into the report.
+
 The base URL depends on the installation:
 - EU production (default): `https://app.timefold.ai`
 - US production: `https://app-us1.timefold.ai`

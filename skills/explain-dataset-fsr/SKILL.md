@@ -45,14 +45,14 @@ Set `SCRIPTS` to that absolute path before you run anything. If this file is at
 ```bash
 SCRIPTS=/absolute/path/to/skills/explain-dataset-shared/scripts
 
-python $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--tenant ID]
-python $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--recommendations]
-python $SCRIPTS/resource_metrics.py      --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--sort overtime|travel|visits|name]
-python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --work-ids "visit-001"
-python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --resource "VAN-12"
-python $SCRIPTS/score_violations.py      --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--type hard|medium|soft]
-python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID [--samples 3]
-python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --resource "VAN-12"
+python $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--tenant ID]
+python $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--recommendations]
+python $SCRIPTS/resource_metrics.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--sort overtime|travel|visits|name]
+python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --work-ids "visit-001"
+python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "VAN-12"
+python $SCRIPTS/score_violations.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--type hard|medium|soft]
+python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--samples 3]
+python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "VAN-12"
 ```
 
 ## API

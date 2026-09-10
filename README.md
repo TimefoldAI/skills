@@ -56,14 +56,24 @@ install for all your projects.
   [Tenant details](https://docs.timefold.ai/timefold-platform/latest/how-tos/tenant-details).
 - Python 3 and the `requests` package: `pip install requests`.
 
-The scripts read these environment variables, so you do not have to pass the values on each
-command. The dataset ID, the model, and the model API URL stay on the command line.
+The scripts read these environment variables. The dataset ID, the model, and the model API URL
+stay on the command line.
 
 | Variable | Purpose |
 |---|---|
-| `TIMEFOLD_API_KEY` | Your API key |
-| `TIMEFOLD_TENANT` | Your tenant ID |
+| `TIMEFOLD_API_KEY` | Your API key. Required, and the environment is the only way to supply it |
+| `TIMEFOLD_TENANT` | Your tenant ID. Optional, `--tenant` also works |
 | `TIMEFOLD_PLATFORM_URL` | Your platform URL. The default is `https://app.timefold.ai` |
+
+Export your API key in the shell you start your agent from:
+
+```bash
+export TIMEFOLD_API_KEY=<your-api-key>
+```
+
+The scripts take no `--api-key` argument, on purpose. A key on a command line reaches the context
+of the agent that runs the command, and from there it can end up in a transcript, a log, or a
+report. Keep it in your shell profile or in a secret manager, and the agent never sees it.
 
 If your agent cannot run shell commands, the skill calls the API directly instead. It is
 slower on large datasets.
