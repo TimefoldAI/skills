@@ -1,0 +1,20 @@
+{
+  "name": "timefold-skills",
+  "version": "0.1.0",
+  "description": "Skills for users of Timefold models: explain an optimized dataset, find out why work is unassigned, and interpret the optimization decisions.",
+  "author": {
+    "name": "Timefold",
+    "url": "https://timefold.ai"
+  },
+  "homepage": "https://github.com/TimefoldAI/skills",
+  "repository": "https://github.com/TimefoldAI/skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "timefold",
+    "optimization",
+    "planning",
+    "scheduling",
+    "routing",
+    "explainability"
+  ]
+}

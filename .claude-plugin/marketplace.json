@@ -1,0 +1,14 @@
+{
+  "name": "timefold",
+  "description": "Public Agent Skills from Timefold, for users of the Timefold models.",
+  "owner": {
+    "name": "Timefold"
+  },
+  "plugins": [
+    {
+      "name": "timefold-skills",
+      "source": "./",
+      "description": "Skills for users of Timefold models: explain an optimized dataset, find out why work is unassigned, and interpret the optimization decisions."
+    }
+  ]
+}
