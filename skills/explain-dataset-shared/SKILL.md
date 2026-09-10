@@ -228,9 +228,14 @@ Frame results in operational terms:
 `explain-dataset` owns the report's *findings* below; everything about *how* the report gets
 assembled, presented, and saved is delegated to the `timefold-write-report` skill (read
 `../timefold-write-report/SKILL.md` if it isn't already loaded). That skill decides
-save-vs-chat, offers richer formats, assembles the metadata block, adds the footer, and places
-the file. Apply its conventions on top of the findings structure below rather than reinventing
-any of that here.
+save-vs-chat, assembles the metadata block, adds the footer, and places the file. Apply its
+conventions on top of the findings structure below rather than reinventing any of that here.
+
+The report is Markdown, and it serves two readers. A planner reads it to understand the plan. An
+agent reads it later, in a fresh session, to answer a follow-up question about the same dataset.
+The second reader is why the metadata block and the audit log below matter as much as the
+findings: together they say which dataset the findings describe and which calls produced them, so
+the next session can pick the file up cold and keep going instead of starting over.
 
 `timefold-write-report` ships in this plugin, next to this skill. If you genuinely cannot reach
 it, tell the user once: "I couldn't find the
@@ -243,7 +248,7 @@ saved, pick a sensible timestamped path and tell them where you wrote it.
 **Title**: `# /explain-dataset <dataset name>`
 
 **Extra metadata bullets** for `timefold-write-report` to merge into its "Report metadata"
-block, after its five standard bullets:
+block, after its standard bullets:
 - **Tenant:** `<tenant-name> (`<tenant-id>`)`
 - **Dataset:** `<dataset-name> (`<dataset-id>`) + <tags>`. Drop the ` + <tags>` suffix if
   `summarize.py` printed no `Tags` line
@@ -251,8 +256,15 @@ block, after its five standard bullets:
   unassigned?" or "Why is the workload distributed unevenly across employees?"), or "No scope
   restrictions requested: general overview" if they asked for a general read of the dataset
 
-**Source repository**: omit this bullet. The findings come from a live API dataset, not a git
-repo.
+**Source**: the findings come from a live API dataset, not a git repo, so replace
+`timefold-write-report`'s "Source repository" bullet with these two:
+- **Model:** `<model display name> (`<model-key>`)`, e.g. `Field Service Routing
+  (`field-service-routing`)`
+- **Model API URL:** the `$MODEL_API_URL` you ran the scripts against
+
+Those two, plus the tenant and dataset bullets above, are what let a later session re-fetch this
+same dataset. The model key alone is not enough, because the same key runs on more than one
+platform installation. Never write the API key into the report. The reader supplies their own.
 
 **Skill plugin version**: read the `version` field from `.claude-plugin/plugin.json` at the
 root of this repository.
@@ -317,7 +329,10 @@ operational terms. Never include the raw score string as a headline. Translate i
 ## Appendix B: Analysis audit log
 
 List every API call made during this analysis, in the order they were run. This lets the
-reader assess how thorough the analysis was and reproduce or extend it independently.
+reader assess how thorough the analysis was, and it tells the next session which ground the
+analysis already covered and which endpoints are still open. A follow-up question usually starts
+from a call listed here, either by repeating it with a narrower filter or by calling something
+this run never touched.
 
 Format as a table:
 
