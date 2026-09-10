@@ -103,8 +103,14 @@ Run these before presenting the report:
     supply enough of them to fetch the same data again: which tenant, which dataset, which model, which
     API base URL. See "Make the block enough to re-ground on" below.
 - **Skill/plugin version**: identify the skill and plugin who produced the report's *findings* (not
-  necessarily this skill), and read the `version` field from that plugin's `.claude-plugin/plugin.json`. For
-  a skill in this plugin, that is `.claude-plugin/plugin.json` at the root of this repository.
+  necessarily this skill), and read the version from where that skill is *installed*. Do not look in the
+  working directory. Skills run inside the user's project, and that project is not the plugin, so a
+  `.claude-plugin/plugin.json` lookup relative to the working directory finds nothing and the version comes
+  out empty. Anchor on the generating skill's own directory instead: in Claude Code that is
+  `${CLAUDE_SKILL_DIR}`, and `${CLAUDE_PLUGIN_ROOT}` is its plugin's install directory, both substituted
+  into a SKILL.md body. Read the `version` field from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`.
+  Some installs copy skill folders without the manifest, so if the generating skill ships a version stamp
+  of its own, prefer that. The calling skill says where its version lives.
 - **Requested scope**: a plain-language summary of what was actually asked of the generating skill/agent for
   this run: which target(s), which categories/types, any filters, exclusions, or non-default options.
   Pull this from the actual instructions the generating skill/agent was invoked with, not from what the

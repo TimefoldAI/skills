@@ -1,6 +1,10 @@
 # Bumps the minor version of the plugin when its content changes on main.
 # Claude uses the plugin version to find out that a plugin changed and must be
 # reloaded. Without a version bump, installed plugins do not update.
+#
+# The version goes into two files. The manifest is what Claude Code reads.
+# skills/explain-dataset-shared/VERSION is what the skills read for the report
+# metadata, because some installs copy the skill folders without the manifest.
 
 name: Bump plugin version
 
@@ -27,10 +31,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          if git diff --name-only HEAD~1 HEAD | grep -qv '^\.claude-plugin/plugin\.json$'; then
+          # The bump commit itself only touches the version files. Never bump on those,
+          # or every bump triggers the next one.
+          changed=$(git diff --name-only HEAD~1 HEAD)
+          content=$(grep -vE '^(\.claude-plugin/plugin\.json|skills/explain-dataset-shared/VERSION)$' \
+            <<< "$changed" || true)
+
+          if [ -n "$content" ]; then
             echo "Plugin content changed."
           else
-            echo "Only the manifest changed. Nothing to bump."
+            echo "Only the version files changed. Nothing to bump."
             exit 0
           fi
 
@@ -43,10 +53,14 @@ jobs:
 
           jq --arg v "$new_version" '.version = $v' "$manifest" > tmp.json
           mv tmp.json "$manifest"
+
+          stamp=skills/explain-dataset-shared/VERSION
+          echo "$new_version" > "$stamp"
+
           echo "Bumped $plugin_name: $current -> $new_version"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$manifest"
+          git add "$manifest" "$stamp"
           git commit -m "chore: bump plugin version: ${plugin_name}:${new_version} [skip ci]"
           git push

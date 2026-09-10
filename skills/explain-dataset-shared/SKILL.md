@@ -292,8 +292,21 @@ Those two, plus the tenant and dataset bullets above, are what let a later sessi
 same dataset. The model key alone is not enough, because the same key runs on more than one
 platform installation. Never write the API key into the report. The reader supplies their own.
 
-**Skill plugin version**: read the `version` field from `.claude-plugin/plugin.json` at the
-root of this repository.
+**Skill plugin version**: resolve it from the directory these skills are installed in, never
+from the user's working directory. The working directory is the user's own project, which is not
+this plugin, so a lookup there finds nothing. Try these in order and stop at the first that
+works:
+
+1. `cat $SHARED/VERSION`. This stamp ships inside the skill folder, so it survives every
+   install shape, including the ones that copy the skill folders and leave the plugin manifest
+   behind.
+2. The `version` field of `$PLUGIN_ROOT/.claude-plugin/plugin.json`, for an install that keeps
+   the manifest.
+3. Only if both are missing, report the version as not available, and name the two paths you
+   looked in.
+
+`$SHARED` and `$PLUGIN_ROOT` are the variables the model-specific skill set before it sent you
+here.
 
 **Footer target**: this model's own skill, e.g. `skills/explain-dataset-fsr`.
 
