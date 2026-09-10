@@ -100,6 +100,7 @@ skills/
   explain-dataset-pdr/
   explain-dataset-shared/
     SKILL.md
+    VERSION            # version stamp for the report metadata
     references/        # loaded on demand
     scripts/           # Python helpers that call the Timefold API
   language-guidelines/
@@ -111,6 +112,11 @@ skills/
 The plugin version follows semantic versioning. A GitHub Actions workflow bumps the minor
 version each time the skills change on `main`. Claude uses that version to find out that the
 plugin must be reloaded, so do not remove the bump.
+
+The workflow writes the version into two files: `.claude-plugin/plugin.json`, which Claude Code
+reads, and `skills/explain-dataset-shared/VERSION`, which the skills read for the report
+metadata. Both are needed, because `npx skills add` copies the skill folders without the plugin
+manifest. Keep them in sync.
 
 ## Documentation
 

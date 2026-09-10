@@ -39,11 +39,18 @@ OPENAPI_URL=https://app.timefold.ai/openapis/field-service-routing/v1
 ## Scripts
 
 Scripts live in the sibling skill `explain-dataset-shared`, in its `scripts/` directory.
-Set `SCRIPTS` to that absolute path before you run anything. If this file is at
-`<dir>/SKILL.md`, then the scripts are at `<dir>/../explain-dataset-shared/scripts`.
+Anchor every path on this skill's own directory, not on the working directory. The working
+directory is the user's project, and these skills are installed somewhere else.
+
+In Claude Code, `${CLAUDE_SKILL_DIR}` is substituted with this skill's directory. If your agent
+leaves the placeholder unresolved, replace it with the absolute directory that holds this
+`SKILL.md`.
 
 ```bash
-SCRIPTS=/absolute/path/to/skills/explain-dataset-shared/scripts
+SKILL_DIR=${CLAUDE_SKILL_DIR}
+SHARED=$SKILL_DIR/../explain-dataset-shared
+SCRIPTS=$SHARED/scripts
+PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT:-$SKILL_DIR/../..}
 
 python $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--tenant ID]
 python $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--recommendations]
@@ -54,6 +61,9 @@ python $SCRIPTS/score_violations.py      --model-api-url $MODEL_API_URL --model 
 python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--samples 3]
 python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "VAN-12"
 ```
+
+`$SHARED` also carries the version stamp and, in a plugin install, `$PLUGIN_ROOT` carries the
+plugin manifest. The report metadata needs both. Keep the two variables set.
 
 ## API
 
@@ -92,4 +102,4 @@ OpenAPI spec: https://app.timefold.ai/openapis/field-service-routing/v1
 
 ## Full instructions
 
-Read and follow: `../explain-dataset-shared/SKILL.md`
+Read and follow: `$SHARED/SKILL.md`
