@@ -3,10 +3,12 @@
 Fetches a Timefold dataset and prints a compact, readable summary of results.
 Works for any model defined in model_config.py, selected via --model.
 
+Reads the API key from the TIMEFOLD_API_KEY environment variable. It accepts no --api-key
+argument, so the key stays out of the command line.
+
 Usage:
-    python summarize.py --model employee-shift-scheduling --api-key KEY --dataset-id ID [--tenant ID]
-    python summarize.py --model field-service-routing --api-key KEY --dataset-id ID
-    TIMEFOLD_API_KEY=KEY python summarize.py --model employee-shift-scheduling --dataset-id ID
+    python summarize.py --model employee-shift-scheduling --dataset-id ID [--tenant ID]
+    python summarize.py --model field-service-routing --dataset-id ID
 """
 import argparse
 import os

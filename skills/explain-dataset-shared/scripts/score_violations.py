@@ -3,11 +3,13 @@
 Shows violated constraints with sample justifications.
 Works for any model defined in model_config.py, selected via --model.
 
+Reads the API key from the TIMEFOLD_API_KEY environment variable. It accepts no --api-key
+argument, so the key stays out of the command line.
+
 Usage:
-    python score_violations.py --model employee-shift-scheduling --api-key KEY --dataset-id ID [--type hard|medium|soft]
-    python score_violations.py --model field-service-routing --api-key KEY --dataset-id ID --constraint "unassigned"
-    python score_violations.py --model pickup-delivery-routing --api-key KEY --dataset-id ID --type hard
-    TIMEFOLD_API_KEY=KEY python score_violations.py --model employee-shift-scheduling --dataset-id ID --type hard
+    python score_violations.py --model employee-shift-scheduling --dataset-id ID [--type hard|medium|soft]
+    python score_violations.py --model field-service-routing --dataset-id ID --constraint "unassigned"
+    python score_violations.py --model pickup-delivery-routing --dataset-id ID --type hard
 """
 import argparse
 import os

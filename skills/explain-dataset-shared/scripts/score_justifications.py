@@ -13,13 +13,15 @@ Additional filters (combinable):
   --type hard|medium|soft|all    Restrict to one constraint tier (default: all violated)
   --constraint NAME              Restrict to one constraint by name (substring match)
 
+Reads the API key from the TIMEFOLD_API_KEY environment variable. It accepts no --api-key
+argument, so the key stays out of the command line.
+
 Usage:
-    python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID
-    python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID --samples 5 --type hard
-    python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID --resource "VAN-12"
-    python score_justifications.py --model field-service-routing --api-key KEY --dataset-id ID --resource "TRK-07" --type hard
-    python score_justifications.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --resource "EMP-001"
-    TIMEFOLD_API_KEY=KEY python score_justifications.py --model field-service-routing --dataset-id ID --resource "VAN-12"
+    python score_justifications.py --model field-service-routing --dataset-id ID
+    python score_justifications.py --model field-service-routing --dataset-id ID --samples 5 --type hard
+    python score_justifications.py --model field-service-routing --dataset-id ID --resource "VAN-12"
+    python score_justifications.py --model field-service-routing --dataset-id ID --resource "TRK-07" --type hard
+    python score_justifications.py --model employee-shift-scheduling --dataset-id ID --resource "EMP-001"
 """
 
 import argparse

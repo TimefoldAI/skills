@@ -7,8 +7,8 @@ per-resource investigation.
 ## Why is a work item unassigned?
 
 ```bash
-python $SCRIPTS/list_unassigned.py --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID
-python $SCRIPTS/list_unassigned.py --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --recommendations
+python $SCRIPTS/list_unassigned.py --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID
+python $SCRIPTS/list_unassigned.py --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --recommendations
 ```
 
 `list_unassigned.py` shows each unassigned item with its requirements (skills, time, location).
@@ -47,7 +47,7 @@ Use `score_violations.py` on the baseline to identify the constraints most likel
 
 1. Use `work_details.py` to see the item's requirements and who is assigned:
    ```bash
-   python $SCRIPTS/work_details.py --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --work-ids ID
+   python $SCRIPTS/work_details.py --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --work-ids ID
    ```
 2. Use `score_violations.py --constraint "..."` to see if any violated constraint
    specifically mentions this resource–item pair.
@@ -132,9 +132,9 @@ Timefold contact rather than something you can adjust in the input."
 ## Resource workload and fairness
 
 ```bash
-python $SCRIPTS/resource_metrics.py --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID
-python $SCRIPTS/resource_metrics.py --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --sort overtime
-python $SCRIPTS/resource_metrics.py --model-api-url $MODEL_API_URL --model $MODEL --api-key KEY --dataset-id ID --filter "Name"
+python $SCRIPTS/resource_metrics.py --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID
+python $SCRIPTS/resource_metrics.py --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --sort overtime
+python $SCRIPTS/resource_metrics.py --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --filter "Name"
 ```
 
 The script auto-flags resources with overtime, unpreference violations (Employee Shift Scheduling),

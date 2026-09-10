@@ -10,10 +10,12 @@ For pickup-delivery-routing: shows per-driver metrics (travel time, distance, ov
 Sort keys vary by model — the full list of valid --sort values for the given --model is
 printed at the end of every run ("Available --sort values: ...").
 
+Reads the API key from the TIMEFOLD_API_KEY environment variable. It accepts no --api-key
+argument, so the key stays out of the command line.
+
 Usage:
-    python resource_metrics.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --sort overtime
-    python resource_metrics.py --model employee-shift-scheduling --api-key KEY --dataset-id ID --filter "EMP-001"
-    TIMEFOLD_API_KEY=KEY python resource_metrics.py --model employee-shift-scheduling --dataset-id ID
+    python resource_metrics.py --model employee-shift-scheduling --dataset-id ID --sort overtime
+    python resource_metrics.py --model employee-shift-scheduling --dataset-id ID --filter "EMP-001"
 """
 import argparse
 import os

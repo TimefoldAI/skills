@@ -16,9 +16,7 @@ these skills work in Claude Code, Cursor, Codex, GitHub Copilot, and many other 
 | [`explain-dataset-pdr`](./skills/explain-dataset-pdr) | Explain an optimized dataset of the Pick-up and Delivery Routing model |
 | [`explain-dataset-shared`](./skills/explain-dataset-shared) | The model-agnostic workflow and the Python scripts. The three skills above read it. Do not invoke it directly. |
 | [`language-guidelines`](./skills/language-guidelines) | Timefold's language rules and terminology. The report prose follows them. |
-| [`timefold-write-report`](./skills/timefold-write-report) | How a report is assembled, where it is saved, and which formats are available. |
-| [`brand-guidelines`](./skills/brand-guidelines) | Timefold's brand colors and typography, for branded reports and for UI work. |
-| [`timefold-logo`](./skills/timefold-logo) | The official Timefold logo files. Never draw or approximate the logo. |
+| [`timefold-write-report`](./skills/timefold-write-report) | How a report is assembled, which metadata it carries, and where it is saved. |
 
 The `explain-dataset` skills answer questions about a dataset that Timefold has optimized:
 
@@ -58,14 +56,24 @@ install for all your projects.
   [Tenant details](https://docs.timefold.ai/timefold-platform/latest/how-tos/tenant-details).
 - Python 3 and the `requests` package: `pip install requests`.
 
-The scripts read these environment variables, so you do not have to pass the values on each
-command. The dataset ID, the model, and the model API URL stay on the command line.
+The scripts read these environment variables. The dataset ID, the model, and the model API URL
+stay on the command line.
 
 | Variable | Purpose |
 |---|---|
-| `TIMEFOLD_API_KEY` | Your API key |
-| `TIMEFOLD_TENANT` | Your tenant ID |
+| `TIMEFOLD_API_KEY` | Your API key. Required, and the environment is the only way to supply it |
+| `TIMEFOLD_TENANT` | Your tenant ID. Optional, `--tenant` also works |
 | `TIMEFOLD_PLATFORM_URL` | Your platform URL. The default is `https://app.timefold.ai` |
+
+Export your API key in the shell you start your agent from:
+
+```bash
+export TIMEFOLD_API_KEY=<your-api-key>
+```
+
+The scripts take no `--api-key` argument, on purpose. A key on a command line reaches the context
+of the agent that runs the command, and from there it can end up in a transcript, a log, or a
+report. Keep it in your shell profile or in a secret manager, and the agent never sees it.
 
 If your agent cannot run shell commands, the skill calls the API directly instead. It is
 slower on large datasets.
@@ -96,9 +104,6 @@ skills/
     scripts/           # Python helpers that call the Timefold API
   language-guidelines/
   timefold-write-report/
-  brand-guidelines/
-  timefold-logo/
-    assets/            # official logo files, SVG and PNG
 ```
 
 ## Versioning
@@ -116,14 +121,11 @@ plugin must be reloaded, so do not remove the bump.
 
 ## Contributing
 
-Open an issue or a pull request. Keep each skill self-contained, and keep the shared workflow
-model-agnostic.
+We do not accept code contributions to this repository at this time, and forking is disabled.
+Bug reports and requests are welcome as [issues](https://github.com/TimefoldAI/skills/issues).
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
 The skills, the scripts, and the documentation are under the
 [Apache License 2.0](./LICENSE).
-
-The logo files in `skills/timefold-logo/assets/` are trademarks of Timefold BV. The license above
-does not grant you a right to use them. Use them only to represent Timefold, and do not modify
-them.

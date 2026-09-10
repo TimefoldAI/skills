@@ -7,11 +7,13 @@ For employee-shift-scheduling: shows unassigned shifts with required skills, tim
 For field-service-routing: shows unassigned visits with service duration, time windows, required skills.
 For pickup-delivery-routing: shows unassigned jobs with their stops and priority.
 
+Reads the API key from the TIMEFOLD_API_KEY environment variable. It accepts no --api-key
+argument, so the key stays out of the command line.
+
 Usage:
-    python list_unassigned.py --model employee-shift-scheduling --api-key KEY --dataset-id ID [--recommendations]
-    python list_unassigned.py --model field-service-routing --api-key KEY --dataset-id ID
-    python list_unassigned.py --model pickup-delivery-routing --api-key KEY --dataset-id ID
-    TIMEFOLD_API_KEY=KEY python list_unassigned.py --model employee-shift-scheduling --dataset-id ID
+    python list_unassigned.py --model employee-shift-scheduling --dataset-id ID [--recommendations]
+    python list_unassigned.py --model field-service-routing --dataset-id ID
+    python list_unassigned.py --model pickup-delivery-routing --dataset-id ID
 """
 import argparse
 import os
