@@ -32,6 +32,17 @@ change your dataset.
 
 ## Installation
 
+### Any agent: give it this prompt
+
+Copy this prompt into your agent. It installs the skills for you:
+
+```text
+Run 'npx skills add TimefoldAI/skills' and install all the skills locally in this project folder. Install them for the agent harness this prompt was run in.
+```
+
+The agent runs the command, and it selects the correct folder for its own harness. Use this
+option if you do not know which of the commands below applies to your agent.
+
 ### Claude Code
 
 ```bash
