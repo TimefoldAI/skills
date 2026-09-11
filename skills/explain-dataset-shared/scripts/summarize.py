@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = []
+# ///
 """
 Fetches a Timefold dataset and prints a compact, readable summary of results.
 Works for any model defined in model_config.py, selected via --model.
@@ -17,7 +21,7 @@ import sys
 _DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _DIR)
 
-from timefold_api import model_api_get, fmt, seconds, parse_score, score_sort_key, constraint_type, add_common_args, resolve_args, platform_links, fmt_solver_status, get_tenant_name
+from timefold_api import model_api_get, fmt, seconds, parse_score, score_sort_key, constraint_type, add_common_args, resolve_args, run, platform_links, fmt_solver_status, get_tenant_name
 from model_config import get_config, nested_get
 
 
@@ -256,4 +260,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run(main)

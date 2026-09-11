@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = []
+# ///
 """
 Shows violated constraints with sample justifications.
 Works for any model defined in model_config.py, selected via --model.
@@ -18,7 +22,7 @@ import sys
 _DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _DIR)
 
-from timefold_api import model_api_get, parse_score, score_sort_key, constraint_type, add_common_args, resolve_args
+from timefold_api import model_api_get, parse_score, score_sort_key, constraint_type, add_common_args, resolve_args, run
 from model_config import get_config
 
 
@@ -100,4 +104,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run(main)

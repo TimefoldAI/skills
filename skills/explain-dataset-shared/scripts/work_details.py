@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = []
+# ///
 """
 Looks up one or more work items by ID, showing their input requirements and
 current assignment. Also supports looking up all work items for a given resource.
@@ -23,7 +27,7 @@ import sys
 _DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _DIR)
 
-from timefold_api import model_api_get, fmt, fmt_datetime, duration_between, add_common_args, resolve_args
+from timefold_api import model_api_get, fmt, fmt_datetime, duration_between, add_common_args, resolve_args, run
 from model_config import get_config, get_unassigned_ids, fmt_work_skills, fmt_work_location, fmt_time_windows, nested_get
 
 
@@ -177,4 +181,4 @@ def _print_work_details(item, cfg):
 
 
 if __name__ == "__main__":
-    main()
+    run(main)

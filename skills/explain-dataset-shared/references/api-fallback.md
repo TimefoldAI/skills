@@ -1,6 +1,49 @@
 # Direct API fallback
 
-Use this when Bash is not available and you cannot run the Python scripts.
+Use this when you cannot run the Python scripts. Two cases reach this file:
+
+- **Level 3: Bash works, but the machine has no Python and no uv.** Use `curl`. It is present on
+  macOS, on Linux, and on Windows 10 and later. Keep the key in the environment, exactly as the
+  scripts do:
+
+  ```bash
+  curl -sS -H "X-API-KEY: $TIMEFOLD_API_KEY" \
+    "$MODEL_API_URL$COLLECTION/DATASET_ID?tfSource=timefold-skills.$SKILL.curl"
+  ```
+
+  Add `| head -c 4000` to keep a large payload out of your context, or write the response to a
+  file and read the parts you need:
+
+  ```bash
+  curl -sS -H "X-API-KEY: $TIMEFOLD_API_KEY" \
+    "$MODEL_API_URL$COLLECTION/DATASET_ID?tfSource=timefold-skills.$SKILL.curl" > /tmp/ds.json
+  ```
+
+  At this level the key stays in the environment, so it does not enter the conversation.
+
+- **Level 4: no shell at all** (Claude Desktop without a shell MCP, or the Web UI). Use WebFetch
+  with the request patterns below. Read the warning in the next section first: without a shell the
+  key has to pass through the conversation.
+
+## The `tfSource` parameter
+
+Add `tfSource` to every request you make here, exactly as the scripts do. It tells Timefold that
+the call came from these skills:
+
+```
+tfSource=timefold-skills.<skill>.<how>~<version>
+```
+
+- `<skill>` is `explain-dataset-ess`, `explain-dataset-fsr`, or `explain-dataset-pdr`.
+- `<how>` is `curl` at level 3, and `webfetch` at level 4.
+- `<version>` is the content of `$SHARED/VERSION`. Leave off `~<version>` if you cannot read it.
+
+Example: `tfSource=timefold-skills.explain-dataset-fsr.webfetch~0.3.0`
+
+Append it with `?` when the URL has no query string yet, and with `&` when it already has one:
+`.../score-analysis?includeJustifications=true&tfSource=...`
+
+The parameter carries no tenant ID, no dataset ID, and no key. It never replaces a real parameter.
 
 ## Auth and base URL
 
@@ -8,9 +51,10 @@ All endpoints below are **Model API** endpoints, authenticated with `X-API-KEY: 
 This is distinct from the Platform API (used for configuration management), which requires a
 Bearer personal access token. For this skill you only need the Model API key.
 
-**This mode cannot keep the key out of the conversation.** Without Bash there is no environment
+**Level 4 cannot keep the key out of the conversation.** Without a shell there is no environment
 variable to read it from, so the user has to give you the key and you have to put it in a request
-header. Say so before you ask for it:
+header. Level 3 does not have this problem: `curl` reads `$TIMEFOLD_API_KEY` from the environment.
+At level 4, say this before you ask for the key:
 
 > "Without a shell I have to call the API directly, which means the key passes through this
 > conversation and stays in the transcript. If that's a problem, run this skill in Claude Code
@@ -79,7 +123,8 @@ Navigate the resource list in `modelOutput`. Each entry has a `metrics` object:
 ## API reference
 
 ```
-Auth: X-API-KEY: {your-api-token}
+Auth:  X-API-KEY: {your-api-token}
+Every request also takes ?tfSource=timefold-skills.<skill>.<how>~<version>
 
 GET  {base}/{collection}/{id}                                    # Full solution + KPIs + resource metrics
 GET  {base}/{collection}/{id}/metadata                           # Solver status only (fast)

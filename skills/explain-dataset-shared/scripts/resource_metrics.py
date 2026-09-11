@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = []
+# ///
 """
 Shows per-resource metrics in a compact table with configurable sort order.
 Flags overtime, unpreference violations, and underutilized resources automatically.
@@ -24,7 +28,7 @@ import sys
 _DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _DIR)
 
-from timefold_api import model_api_get, fmt, seconds, iso_duration, parse_score, add_common_args, resolve_args
+from timefold_api import model_api_get, fmt, seconds, iso_duration, parse_score, add_common_args, resolve_args, run
 from model_config import get_config, nested_get
 
 
@@ -214,4 +218,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run(main)

@@ -54,7 +54,31 @@ install for all your projects.
   [API usage](https://docs.timefold.ai/timefold-platform/latest/api/api-usage). You find your
   tenant ID under
   [Tenant details](https://docs.timefold.ai/timefold-platform/latest/how-tos/tenant-details).
-- Python 3 and the `requests` package: `pip install requests`.
+- **No other prerequisite.** The scripts use the Python standard library only. There is nothing
+  to `pip install`, and no virtual environment to create.
+
+The skill finds a runtime by itself, in this order:
+
+| Level | Condition | What runs |
+|---|---|---|
+| 1 | [uv](https://docs.astral.sh/uv/getting-started/installation/) is installed | `uv run <script>`, and uv supplies a Python if the machine has none |
+| 2 | Python 3.9 or later is installed | `python3 <script>` (or `python` on Windows) |
+| 3 | A shell, but no Python | `curl` calls the API directly |
+| 4 | No shell (Claude Desktop, Web UI) | The agent calls the API with WebFetch |
+
+Levels 1 and 2 are the fast path: the scripts handle pagination, they format the results, and
+they keep large payloads out of the agent's context. Levels 3 and 4 still work, but on a large
+dataset they are slower and the agent can miss detail.
+
+If you have no Python, install uv. It is one binary, it needs no administrator rights, and it
+works on macOS, Linux, and Windows:
+
+```bash
+# macOS and Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
 
 The scripts read these environment variables. The dataset ID, the model, and the model API URL
 stay on the command line.
@@ -63,7 +87,6 @@ stay on the command line.
 |---|---|
 | `TIMEFOLD_API_KEY` | Your API key. Required, and the environment is the only way to supply it |
 | `TIMEFOLD_TENANT` | Your tenant ID. Optional, `--tenant` also works |
-| `TIMEFOLD_PLATFORM_URL` | Your platform URL. The default is `https://app.timefold.ai` |
 
 Export your API key in the shell you start your agent from:
 
@@ -75,8 +98,8 @@ The scripts take no `--api-key` argument, on purpose. A key on a command line re
 of the agent that runs the command, and from there it can end up in a transcript, a log, or a
 report. Keep it in your shell profile or in a secret manager, and the agent never sees it.
 
-If your agent cannot run shell commands, the skill calls the API directly instead. It is
-slower on large datasets.
+If your agent cannot run shell commands, the skill calls the API directly instead (level 4
+above). It is slower on large datasets.
 
 ## Usage
 

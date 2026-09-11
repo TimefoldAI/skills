@@ -46,19 +46,22 @@ In Claude Code, `${CLAUDE_SKILL_DIR}` is substituted with this skill's directory
 leaves the placeholder unresolved, replace it with the absolute directory that holds this
 `SKILL.md`.
 
+`$PY` is the Python runner that the shared skill's runtime check selects (`uv run`,
+`python3`, or `python`). Run that check before the first script call.
+
 ```bash
 SKILL_DIR=${CLAUDE_SKILL_DIR}
 SHARED=$SKILL_DIR/../explain-dataset-shared
 SCRIPTS=$SHARED/scripts
 PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT:-$SKILL_DIR/../..}
 
-python $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--tenant ID]
-python $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID
-python $SCRIPTS/resource_metrics.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--sort overtime|travel|name]
-python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --work-ids "job-001"
-python $SCRIPTS/score_violations.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--type hard]
-python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--samples 3]
-python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "driver-001"
+$PY $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--tenant ID]
+$PY $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID
+$PY $SCRIPTS/resource_metrics.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--sort overtime|travel|name]
+$PY $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --work-ids "job-001"
+$PY $SCRIPTS/score_violations.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--type hard]
+$PY $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--samples 3]
+$PY $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "driver-001"
 ```
 
 `$SHARED` also carries the version stamp and, in a plugin install, `$PLUGIN_ROOT` carries the

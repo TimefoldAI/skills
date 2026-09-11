@@ -29,16 +29,67 @@ don't silently skip this or guess at the rules. Tell the user once, early in the
 "I couldn't find the `language-guidelines` skill, so this report won't follow Timefold's language
 guidelines automatically." Then proceed with plain, clear writing on your own judgment.
 
-## Environment: scripts vs. direct API calls
+## Environment: find a runtime first
 
-This skill has two operating modes depending on what tools are available.
+The scripts need nothing more than Python 3.9 or later. They use the standard library only, so
+there is no package to install and no virtual environment to create.
 
-**Check first**: can you run a Bash command? Try a simple `echo test`. If yes, use the Python
-scripts. They are faster, handle pagination and formatting, and are the right choice for any
-dataset with more than ~50 resources or ~200 work items.
+**Run this check once, before Step 1.** It sets `$PY`. Use `$PY` for every script command in
+this skill:
 
-If Bash is not available (Claude Desktop without shell MCP, or the Web UI), read
-`references/api-fallback.md` for WebFetch patterns that replace each script.
+```bash
+PY=""
+uv --version >/dev/null 2>&1 && PY="uv run"
+if [ -z "$PY" ]; then
+  for c in python3 python; do
+    "$c" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' 2>/dev/null \
+      && PY="$c" && break
+  done
+fi
+echo "runner: ${PY:-none}"
+```
+
+The loop runs the candidate, and it does not only look for the name. This matters on Windows,
+where `python` can be a Microsoft Store stub that is on the PATH but does not work.
+
+If a runner is found, use the scripts. They are faster, they handle pagination and formatting,
+and they are the correct choice for any dataset with more than ~50 resources or ~200 work items.
+
+**If no runner is found, do not stop and do not ask the user to install Python.** Drop to the
+next level of this ladder:
+
+| Level | Condition | What to do |
+|---|---|---|
+| 1 | `uv` is on the PATH | `PY="uv run"`, and uv downloads a Python if necessary |
+| 2 | Python 3.9+ is on the PATH | `PY=python3` or `PY=python` |
+| 3 | Bash works, but no Python | Call the API with `curl`; see `references/api-fallback.md` |
+| 4 | No shell at all | Call the API with WebFetch; see `references/api-fallback.md` |
+
+`curl` is present on macOS, on Linux, and on Windows 10 and later, so level 3 works almost
+everywhere. Level 4 covers Claude Desktop without a shell MCP, and the Web UI.
+
+**uv is not a prerequisite.** It is only the best level. Level 2 needs no installation on almost
+every macOS and Linux machine, and levels 3 and 4 answer the same questions without Python. Never
+tell the user that something is missing before you have tried all four levels.
+
+**Tell the user which level you use, once, at the start.** At level 3 or 4 add this:
+
+> "I don't see Python here, so I'll call the Timefold API directly. That works, but on a large
+> dataset it is slower and I can miss detail."
+
+**At level 3, offer to install uv. Do not install it without a yes.** The installer downloads and
+runs a script from the internet, so the user decides. Show the command that applies to their
+system, and continue at level 3 if they decline or do not answer:
+
+> "Optional: if you install uv, I can use the local scripts instead, which is faster and keeps
+> large payloads out of this conversation. It is one binary, it needs no administrator rights,
+> and it changes nothing about your system Python. Shall I run this?
+>   macOS and Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+>   Windows: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
+> Otherwise I'll carry on calling the API directly, which works fine."
+
+The installer puts `uv` in `~/.local/bin`, which the current shell may not have on its PATH. After
+an install, set `PY="$HOME/.local/bin/uv run"` for this session rather than starting a new shell.
 
 **Recommend Claude Code for large datasets.** If the user is on Desktop or Web and the dataset
 has hundreds of resources or thousands of work items, tell them upfront:
@@ -47,11 +98,10 @@ has hundreds of resources or thousands of work items, tell them upfront:
 > Python scripts that handle large responses efficiently. In this environment I'll call the
 > API directly, but parsing very large JSON in context can be slow and may miss detail."
 
-## Scripts (when Bash is available)
+## Scripts (levels 1 and 2)
 
 All scripts live in this skill's own `scripts/` directory. The model-specific skill you read
 first tells you the absolute path as `$SCRIPTS`.
-Require `pip install requests`.
 
 | Script | Purpose |
 |---|---|
@@ -63,16 +113,33 @@ Require `pip install requests`.
 | `score_justifications.py` | **Deep dive into justifications.** `--samples N` for a broad overview; `--resource NAME` to see every constraint violation involving a specific vehicle / employee / driver |
 
 ```bash
-SCRIPTS=scripts
-python $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--tenant ID]
-python $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--recommendations]
-python $SCRIPTS/resource_metrics.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--sort overtime]
-python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --work-ids ID1 ID2
-python $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "Name"
-python $SCRIPTS/score_violations.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--type hard]
-python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--samples 3]
-python $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "Name"
+SCRIPTS=scripts     # $PY comes from the runtime check above
+$PY $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--tenant ID]
+$PY $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--recommendations]
+$PY $SCRIPTS/resource_metrics.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--sort overtime]
+$PY $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --work-ids ID1 ID2
+$PY $SCRIPTS/work_details.py          --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "Name"
+$PY $SCRIPTS/score_violations.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--type hard]
+$PY $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--samples 3]
+$PY $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "Name"
 ```
+
+## Usage parameter on every request
+
+Every call to a Timefold installation carries one extra query parameter, `tfSource`. It tells
+Timefold that the call came from these skills, and which skill and script made it:
+
+```
+tfSource=timefold-skills.explain-dataset-ess.summarize~0.3.0
+         ^ product        ^ skill              ^ script   ^ skill version
+```
+
+The scripts add it by themselves. You add nothing. At level 3 and level 4 you add it yourself to
+each request, because there is no script to do it for you. See `references/api-fallback.md`.
+
+The parameter identifies the skill, not the user. It carries no tenant ID, no dataset ID, no API
+key, and nothing the URL does not already carry. If a user asks what the skill sends to Timefold,
+tell them exactly this, and point at `scripts/timefold_api.py` where they can read the code.
 
 ## Step 1: Gather credentials
 
@@ -169,7 +236,7 @@ Always include these at the top of the report.
 Always start here. It fetches everything needed for the initial overview in one call.
 
 ```bash
-python $SCRIPTS/summarize.py --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID
+$PY $SCRIPTS/summarize.py --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID
 ```
 
 ## Step 3: Present the initial summary

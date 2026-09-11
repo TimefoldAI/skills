@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = []
+# ///
 """
 Shows score analysis justifications with sampling or resource-focused filtering.
 Works for any model defined in model_config.py, selected via --model.
@@ -38,6 +42,7 @@ from timefold_api import (
     model_api_get,
     parse_score,
     resolve_args,
+    run,
     score_sort_key,
 )
 
@@ -189,4 +194,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run(main)

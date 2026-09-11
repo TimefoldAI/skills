@@ -20,17 +20,137 @@ Usage in model skill scripts:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from timefold_api import model_api_get, fmt, add_common_args, resolve_args
 
-Requirements: pip install requests
+Requirements: Python 3.9 or later. The standard library only — no packages to install.
 """
 
+import json
 import os
 import re
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 
-try:
-    import requests
-except ImportError:
-    sys.exit("Missing dependency: pip install requests")
+TIMEOUT_SECONDS = 30
+
+
+class TimefoldApiError(RuntimeError):
+    """A call to a Timefold installation failed.
+
+    Its own class, so run() can report it as one clear line and still let a real bug
+    in a script raise a traceback.
+    """
+
+# ---------------------------------------------------------------------------
+# Usage tracking
+#
+# Every request to a Timefold installation carries one extra query parameter, so
+# Timefold can tell which traffic came from these skills. It identifies the skill,
+# not the user: no tenant, no dataset, no key, and nothing the URL does not already
+# carry. To rename the parameter, change SOURCE_PARAM here and in
+# references/api-fallback.md, which documents the same parameter for the curl and
+# WebFetch fallbacks.
+#
+# Value format:  timefold-skills.<skill>.<script>~<version>
+#   e.g.         timefold-skills.explain-dataset-ess.summarize~0.3.0
+# Split on "~" for the version, then on "." for the parts. Unknown parts are left
+# out, so the value is never shorter than "timefold-skills".
+# ---------------------------------------------------------------------------
+
+SOURCE_PARAM = "tfSource"
+SOURCE_PREFIX = "timefold-skills"
+
+_source = SOURCE_PREFIX
+
+
+def skill_version():
+    """Return the skill version stamp, or None if neither version file is readable."""
+    scripts_dir = os.path.dirname(os.path.abspath(__file__))
+    version_file = os.path.join(scripts_dir, os.pardir, "VERSION")
+    try:
+        with open(version_file, encoding="utf-8") as handle:
+            stamp = handle.read().strip()
+        if stamp:
+            return stamp
+    except OSError:
+        pass
+    manifest = os.path.join(scripts_dir, os.pardir, os.pardir, os.pardir,
+                            ".claude-plugin", "plugin.json")
+    try:
+        with open(manifest, encoding="utf-8") as handle:
+            return json.load(handle).get("version") or None
+    except (OSError, ValueError):
+        return None
+
+
+def set_source(skill=None, script=None, version=None):
+    """Build the value of the usage parameter that every later request carries.
+
+    resolve_args() calls this, so the entry-point scripts need no change.
+    """
+    global _source
+    parts = [SOURCE_PREFIX]
+    for part in (skill, script):
+        if part:
+            parts.append(str(part))
+    value = ".".join(parts)
+    if version:
+        value += "~" + str(version)
+    _source = value
+    return _source
+
+
+def get_source():
+    """Return the current value of the usage parameter."""
+    return _source
+
+
+# ---------------------------------------------------------------------------
+# HTTP layer — standard library only, so the scripts run on any Python 3
+# ---------------------------------------------------------------------------
+
+def _request(method, url, headers, params=None, body=None):
+    """Send one JSON request and return the decoded response body.
+
+    Raises RuntimeError with the status, the URL and the start of the error body.
+    """
+    pairs = [(k, v) for k, v in (params or {}).items() if v is not None]
+    if not any(k == SOURCE_PARAM for k, _ in pairs):
+        pairs.append((SOURCE_PARAM, _source))
+    separator = "&" if "?" in url else "?"
+    url = url + separator + urllib.parse.urlencode(pairs, doseq=True)
+
+    headers = dict(headers)
+    headers.setdefault("Accept", "application/json")
+    data = None
+    if body is not None:
+        data = json.dumps(body).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+            raw = response.read()
+    except urllib.error.HTTPError as error:
+        detail = ""
+        try:
+            detail = error.read().decode("utf-8", "replace").strip()
+        except Exception:
+            pass
+        if len(detail) > 500:
+            detail = detail[:500] + " ..."
+        message = f"HTTP {error.code} {error.reason} for {method} {url}"
+        raise TimefoldApiError(f"{message}\n{detail}" if detail else message) from None
+    except urllib.error.URLError as error:
+        raise TimefoldApiError(f"Cannot reach {url}: {error.reason}") from None
+
+    if not raw:
+        return None
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except ValueError as error:
+        raise TimefoldApiError(f"{url} did not return JSON: {error}") from None
+
 
 # ---------------------------------------------------------------------------
 # Platform base URL — configurable per installation
@@ -58,38 +178,18 @@ def _pb(platform_base=None):
 
 def model_api_get(base_url, path, api_key, params=None):
     """GET {base_url}{path} with X-API-KEY auth. Raises on HTTP errors."""
-    r = requests.get(
-        base_url + path,
-        headers={"X-API-KEY": api_key},
-        params=params,
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()
+    return _request("GET", base_url + path, {"X-API-KEY": api_key}, params=params)
 
 
 def model_api_post(base_url, path, api_key, body, params=None):
     """POST {base_url}{path} with X-API-KEY auth. Raises on HTTP errors."""
-    r = requests.post(
-        base_url + path,
-        headers={"X-API-KEY": api_key},
-        json=body,
-        params=params,
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()
+    return _request("POST", base_url + path, {"X-API-KEY": api_key}, params=params, body=body)
 
 
 def _aboutme_tenants(api_key, platform_base=None):
     """Call /api/aboutme and return the tenants list."""
-    r = requests.get(
-        _pb(platform_base) + "/api/aboutme",
-        headers={"X-API-KEY": api_key},
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json().get("tenants", [])
+    payload = _request("GET", _pb(platform_base) + "/api/aboutme", {"X-API-KEY": api_key})
+    return (payload or {}).get("tenants", [])
 
 
 def get_tenant_name(tenant_id, api_key, platform_base=None):
@@ -111,25 +211,21 @@ def get_tenant_name(tenant_id, api_key, platform_base=None):
 
 def platform_api_get(path, pat, tenant_id, platform_base=None):
     """GET from the Platform API with Bearer PAT + X-TF-TENANT-ID header."""
-    r = requests.get(
+    return _request(
+        "GET",
         _pb(platform_base) + "/api/platform/v1" + path,
-        headers={"Authorization": f"Bearer {pat}", "X-TF-TENANT-ID": tenant_id},
-        timeout=30,
+        {"Authorization": f"Bearer {pat}", "X-TF-TENANT-ID": tenant_id},
     )
-    r.raise_for_status()
-    return r.json()
 
 
 def platform_api_post(path, pat, tenant_id, body, platform_base=None):
     """POST to the Platform API with Bearer PAT + X-TF-TENANT-ID header."""
-    r = requests.post(
+    return _request(
+        "POST",
         _pb(platform_base) + "/api/platform/v1" + path,
-        headers={"Authorization": f"Bearer {pat}", "X-TF-TENANT-ID": tenant_id},
-        json=body,
-        timeout=30,
+        {"Authorization": f"Bearer {pat}", "X-TF-TENANT-ID": tenant_id},
+        body=body,
     )
-    r.raise_for_status()
-    return r.json()
 
 
 # ---------------------------------------------------------------------------
@@ -366,4 +462,38 @@ def resolve_args(args):
         )
     if not args.model_api_url:
         sys.exit("Error: provide --model-api-url (model API base URL)")
+
+    # Stamp every later request with the skill and script that make it.
+    from model_config import MODEL_CONFIGS  # deferred: relies on the caller's sys.path setup
+    skill = MODEL_CONFIGS.get(getattr(args, "model", None), {}).get("skill")
+    script = os.path.splitext(os.path.basename(sys.argv[0]))[0] or None
+    set_source(skill=skill, script=script, version=skill_version())
+
     return args.model_api_url, api_key, args.dataset_id, args.platform_url.rstrip("/")
+
+
+# ---------------------------------------------------------------------------
+# Entry-point wrapper
+# ---------------------------------------------------------------------------
+
+def run(main):
+    """Run a script's main() and turn an expected failure into one clear line.
+
+    A traceback tells the user nothing they can act on, and it fills the context of
+    the agent that reads the output. An unexpected error still raises, because that
+    is a bug in a script and the traceback is the useful part.
+    """
+    try:
+        main()
+    except TimefoldApiError as error:
+        sys.exit(f"Error: {error}")
+    except KeyboardInterrupt:
+        sys.exit("Stopped.")
+    except BrokenPipeError:
+        # A downstream `head` closed the pipe. That is not a failure. Point stdout at
+        # the null device, or Python prints its own error while it shuts down.
+        try:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        except OSError:
+            pass
+        sys.exit(0)

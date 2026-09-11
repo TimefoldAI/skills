@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = []
+# ///
 """
 Lists unassigned work items with their details from the input.
 Works for any model defined in model_config.py, selected via --model.
@@ -22,7 +26,7 @@ import sys
 _DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _DIR)
 
-from timefold_api import model_api_get, model_api_post, fmt, fmt_datetime, duration_between, add_common_args, resolve_args
+from timefold_api import model_api_get, model_api_post, fmt, fmt_datetime, duration_between, add_common_args, resolve_args, run
 from model_config import get_config, get_unassigned_ids, get_unassigned_entries, fmt_work_skills, fmt_work_location, fmt_time_windows, nested_get
 
 
@@ -257,4 +261,4 @@ def _print_bulk_recommendations(base, key, did, cp, work_ids, inp, cfg):
 
 
 if __name__ == "__main__":
-    main()
+    run(main)

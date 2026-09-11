@@ -12,6 +12,8 @@ and how to detect unassigned work items — the parts that differ between models
 MODEL_CONFIGS = {
     "employee-shift-scheduling": {
         "name": "Employee Shift Scheduling",
+        # The skill that drives this model. It goes into the usage parameter on every request.
+        "skill": "explain-dataset-ess",
         "collection_path": "/schedules",
         # The platform's URL routing (and the Model API path) use "employee-scheduling" —
         # an older, shorter slug that predates this plugin's "employee-shift-scheduling" key.
@@ -100,6 +102,7 @@ MODEL_CONFIGS = {
 
     "field-service-routing": {
         "name": "Field Service Routing",
+        "skill": "explain-dataset-fsr",
         "collection_path": "/route-plans",
         "platform_model_slug": "field-service-routing",
 
@@ -190,6 +193,7 @@ MODEL_CONFIGS = {
 
     "pickup-delivery-routing": {
         "name": "Pick-up and Delivery Routing",
+        "skill": "explain-dataset-pdr",
         "collection_path": "/route-plans",
         "platform_model_slug": "pickup-delivery-routing",
 
