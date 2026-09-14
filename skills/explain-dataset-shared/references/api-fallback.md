@@ -8,6 +8,7 @@ Use this when you cannot run the Python scripts. Two cases reach this file:
 
   ```bash
   curl -sS -H "X-API-KEY: $TIMEFOLD_API_KEY" \
+    -A "timefold-skills/$(cat $SHARED/VERSION) (+https://github.com/TimefoldAI/skills)" \
     "$MODEL_API_URL$COLLECTION/DATASET_ID?tfSource=timefold-skills.$SKILL.curl"
   ```
 
@@ -16,6 +17,7 @@ Use this when you cannot run the Python scripts. Two cases reach this file:
 
   ```bash
   curl -sS -H "X-API-KEY: $TIMEFOLD_API_KEY" \
+    -A "timefold-skills/$(cat $SHARED/VERSION) (+https://github.com/TimefoldAI/skills)" \
     "$MODEL_API_URL$COLLECTION/DATASET_ID?tfSource=timefold-skills.$SKILL.curl" > /tmp/ds.json
   ```
 
@@ -24,6 +26,22 @@ Use this when you cannot run the Python scripts. Two cases reach this file:
 - **Level 4: no shell at all** (Claude Desktop without a shell MCP, or the Web UI). Use WebFetch
   with the request patterns below. Read the warning in the next section first: without a shell the
   key has to pass through the conversation.
+
+## The `User-Agent` header
+
+Send a `User-Agent` on every request you make here, exactly as the scripts do:
+
+```
+User-Agent: timefold-skills/<version> (+https://github.com/TimefoldAI/skills)
+```
+
+An installation behind a web application firewall rejects a default library signature before the
+request reaches the API. US production does this, and answers `HTTP 403` with Cloudflare error
+1010, `browser_signature_banned`, whatever the API key says. The default `curl` agent passes today,
+but name the skills anyway. It keeps the traffic identifiable and it survives a stricter rule.
+
+If you get a `HTTP 403` whose body names Cloudflare, a browser signature, or a firewall, the
+request never reached the API. The key is not the problem. Set the header and try again.
 
 ## The `tfSource` parameter
 
@@ -37,6 +55,8 @@ tfSource=timefold-skills.<skill>.<how>~<version>
 - `<skill>` is `explain-dataset-ess`, `explain-dataset-fsr`, or `explain-dataset-pdr`.
 - `<how>` is `curl` at level 3, and `webfetch` at level 4.
 - `<version>` is the content of `$SHARED/VERSION`. Leave off `~<version>` if you cannot read it.
+  The `User-Agent` above takes the same version, and drops the `/<version>` part when you cannot
+  read it.
 
 Example: `tfSource=timefold-skills.explain-dataset-fsr.webfetch~0.3.0`
 

@@ -106,6 +106,38 @@ def get_source():
 
 
 # ---------------------------------------------------------------------------
+# User agent
+#
+# Every request carries a descriptive User-Agent. Without one, urllib sends
+# "Python-urllib/3.x", and an installation behind a web application firewall
+# rejects that signature before the request reaches the API. US production does
+# exactly this: it answers HTTP 403 with Cloudflare error 1010,
+# "browser_signature_banned", whatever the API key says.
+#
+# The value names the skills and their version, the same identity the tfSource
+# parameter carries. It holds no tenant ID, no dataset ID, no key, and nothing
+# about the user.
+#
+# Value format:  timefold-skills/<version> (+<repository URL>)
+#   e.g.         timefold-skills/0.5.0 (+https://github.com/TimefoldAI/skills)
+# ---------------------------------------------------------------------------
+
+USER_AGENT_URL = "https://github.com/TimefoldAI/skills"
+
+_user_agent = None
+
+
+def user_agent():
+    """Return the User-Agent that every request carries. Read the version once."""
+    global _user_agent
+    if _user_agent is None:
+        version = skill_version()
+        product = SOURCE_PREFIX + ("/" + version if version else "")
+        _user_agent = f"{product} (+{USER_AGENT_URL})"
+    return _user_agent
+
+
+# ---------------------------------------------------------------------------
 # HTTP layer — standard library only, so the scripts run on any Python 3
 # ---------------------------------------------------------------------------
 
@@ -122,6 +154,7 @@ def _request(method, url, headers, params=None, body=None):
 
     headers = dict(headers)
     headers.setdefault("Accept", "application/json")
+    headers.setdefault("User-Agent", user_agent())
     data = None
     if body is not None:
         data = json.dumps(body).encode("utf-8")
@@ -140,6 +173,14 @@ def _request(method, url, headers, params=None, body=None):
         if len(detail) > 500:
             detail = detail[:500] + " ..."
         message = f"HTTP {error.code} {error.reason} for {method} {url}"
+        if error.code == 403:
+            message += (
+                "\nA 403 comes either from the API key or from a web application firewall "
+                "in front of the installation. Check that the key has Read permission on this "
+                "model and this tenant. If the body below names Cloudflare or a browser "
+                "signature, the firewall blocked the request before it reached the API, and "
+                f"the key is not the problem. The request sent User-Agent: {user_agent()}"
+            )
         raise TimefoldApiError(f"{message}\n{detail}" if detail else message) from None
     except urllib.error.URLError as error:
         raise TimefoldApiError(f"Cannot reach {url}: {error.reason}") from None
