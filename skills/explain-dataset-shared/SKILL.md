@@ -124,7 +124,7 @@ $PY $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MO
 $PY $SCRIPTS/score_justifications.py  --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID --resource "Name"
 ```
 
-## Usage parameter on every request
+## What every request carries
 
 Every call to a Timefold installation carries one extra query parameter, `tfSource`. It tells
 Timefold that the call came from these skills, and which skill and script made it:
@@ -137,9 +137,25 @@ tfSource=timefold-skills.explain-dataset-ess.summarize~0.3.0
 The scripts add it by themselves. You add nothing. At level 3 and level 4 you add it yourself to
 each request, because there is no script to do it for you. See `references/api-fallback.md`.
 
-The parameter identifies the skill, not the user. It carries no tenant ID, no dataset ID, no API
-key, and nothing the URL does not already carry. If a user asks what the skill sends to Timefold,
-tell them exactly this, and point at `scripts/timefold_api.py` where they can read the code.
+Every call also carries a `User-Agent` header that names the skills and their version:
+
+```
+User-Agent: timefold-skills/0.5.0 (+https://github.com/TimefoldAI/skills)
+```
+
+This one is not optional. Python sends `Python-urllib/3.x` when a script sets no user agent, and an
+installation behind a web application firewall rejects that signature before the request reaches
+the API. US production does exactly this, and answers `HTTP 403` with Cloudflare error 1010,
+`browser_signature_banned`, whatever the API key says. The scripts set the header themselves. At
+level 3 and level 4 you set it yourself. See `references/api-fallback.md`.
+
+Both values identify the skill, not the user. They carry no tenant ID, no dataset ID, no API key,
+and nothing the URL does not already carry. If a user asks what the skill sends to Timefold, tell
+them exactly this, and point at `scripts/timefold_api.py` where they can read the code.
+
+**A 403 is not always the key.** If a script or a `curl` call returns `HTTP 403` and the body names
+Cloudflare, a browser signature, or a firewall, the request never reached the API. Do not send the
+user off to check their key permissions. Check the user agent first.
 
 ## Step 1: Gather credentials
 
