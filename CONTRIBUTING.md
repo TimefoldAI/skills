@@ -3,7 +3,8 @@
 Thank you for the interest. We are not accepting code contributions to this repository at this
 time.
 
-Pull requests, including pull requests that add a new skill, stay closed. Forking is disabled.
+Only collaborators can open pull requests, so pull requests from forks, including pull requests
+that add a new skill, are not possible.
 This is not about the quality of the work. These skills describe how the Timefold models behave,
 so we keep authorship of them with the team that builds those models. A skill that gives wrong
 guidance about a model costs a user more than no skill at all.
@@ -23,5 +24,6 @@ guidance about a model costs a user more than no skill at all.
 
 ## For Timefold employees
 
-Work in a branch of this repository and open a pull request against `main`. Keep each skill
-self-contained, and keep the shared workflow model-agnostic.
+Work in a branch of this repository and open a pull request against `main`. You need write
+access to the repository for this. Keep each skill self-contained, and keep the shared workflow
+model-agnostic.

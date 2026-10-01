@@ -161,7 +161,8 @@ manifest. Keep them in sync.
 
 ## Contributing
 
-We do not accept code contributions to this repository at this time, and forking is disabled.
+We do not accept code contributions to this repository at this time. Only collaborators can open
+pull requests.
 Bug reports and requests are welcome as [issues](https://github.com/TimefoldAI/skills/issues).
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
