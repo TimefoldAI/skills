@@ -100,6 +100,47 @@ OpenAPI spec: https://app.timefold.ai/openapis/pickup-delivery-routing/v1
   `assignment` of `MANDATORY` or `OPTIONAL`. Read the dataset's own priority configuration
   rather than assuming every job's priority follows the default prefix convention. See
   [Priority jobs and optional jobs](https://docs.timefold.ai/pickup-delivery-routing/latest/job-service-constraints/priority-jobs-and-optional-jobs).
+- **`SOLVING_COMPLETED` is not a feasibility verdict.** It means the solver stopped. A completed
+  plan with a negative hard score is infeasible.
+
+## Hard constraints: the settings behind them
+
+The shared skill tells you to trace every hard violation to the settings that cause it, and to
+link each one. This table maps the PDR hard constraints that are hardest to trace to what switches
+them on.
+
+| Constraint | Switched on by | Docs |
+|---|---|---|
+| Do not assign stops if previous stop is unassigned | The order of `jobs[].stops[]`. Each stop depends on the stop before it in the list | [Dependencies between stops](https://docs.timefold.ai/pickup-delivery-routing/latest/job-service-constraints/dependencies-between-stops#_defining_stop_dependencies) |
+| Assign stops in sequence | The order of `jobs[].stops[]` | [Dependencies between stops](https://docs.timefold.ai/pickup-delivery-routing/latest/job-service-constraints/dependencies-between-stops#_defining_stop_dependencies) |
+| Assign the same driver shift for dependent stops | Always on for the stops of one job. No setting turns it off | [Dependencies between stops](https://docs.timefold.ai/pickup-delivery-routing/latest/job-service-constraints/dependencies-between-stops#_defining_stop_dependencies) |
+| No semi-assigned jobs | A job with some stops assigned and others not | [Dependencies between stops](https://docs.timefold.ai/pickup-delivery-routing/latest/job-service-constraints/dependencies-between-stops#_defining_stop_dependencies) |
+| Prohibit job pooling | `jobs[].prohibitJobPooling: true` | [Job pooling](https://docs.timefold.ai/pickup-delivery-routing/latest/job-service-constraints/job-requirements-and-tags/job-pooling) |
+| Keep a pinned stop's driver shift | `pin: true` with `startServiceTime` on `drivers[].shifts[].itinerary[]`, `drivers[].shifts[].pinned`, or `freezeTime` | [Pinning stops](https://docs.timefold.ai/pickup-delivery-routing/latest/real-time-planning/real-time-planning-pinning-stops) |
+| Keep a pinned stop's start service time | `pin: true` with `startServiceTime` on `drivers[].shifts[].itinerary[]` | [Pinning stops](https://docs.timefold.ai/pickup-delivery-routing/latest/real-time-planning/real-time-planning-pinning-stops) |
+
+For a hard constraint that is not in this table, find its page in the
+[PDR user guide](https://docs.timefold.ai/pickup-delivery-routing/latest/) before you explain it.
+Don't link a URL that you did not open.
+
+### Stop dependencies: what you can and cannot change
+
+- **The dependencies are not an input field.** The model makes them from the order of the stops
+  in a job: each stop depends on the stop before it. The input record shows no
+  `dependencies` field, but the dependency rules still apply.
+- **A job always finishes in one driver shift.** The model requires every dependent pair of
+  stops to share one driver shift. Unlike Field Service Routing, no pooling or coordination
+  setting relaxes this. `prohibitJobPooling` only controls whether other jobs can interleave with
+  this job.
+- **So a job that cannot fit in one shift is infeasible by itself.** Examples: its stops have
+  time windows on different days, or its stops are pinned to different shifts. Explain it as a
+  model rule, not as a setting the user turned on. Proposals that the user can act on are to align
+  the stops' time windows to one shift, or to change the pinning. Splitting the job into separate
+  jobs removes the order between its stops, so ask the user whether that order matters before
+  you propose it. If the user needs a job to span shifts, say that this needs a model change
+  and is a discussion for their Timefold contact.
+- **Pinning fields in PDR:** `freezeTime`, `pinNextStopDuringFreeze`, `drivers[].shifts[].pinned`,
+  and `pin` with `startServiceTime` on itinerary items. PDR has no `pinningRequested` field.
 
 ## Full instructions
 

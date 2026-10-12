@@ -102,6 +102,58 @@ OpenAPI spec: https://app.timefold.ai/openapis/field-service-routing/v1
   `MANDATORY`, or `OPTIONAL`. Read the dataset's own priority configuration rather than
   assuming a fixed threshold. See
   [Priority visits and optional visits](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/priority-visits-and-optional-visits).
+- **`SOLVING_COMPLETED` is not a feasibility verdict.** It means the solver stopped. A completed
+  plan with a negative hard score is infeasible.
+
+## Hard constraints: the settings behind them
+
+The shared skill tells you to trace every hard violation to the settings that cause it, and to
+link each one. This table maps the FSR hard constraints that are hardest to trace to the input
+field or configuration setting that switches them on.
+
+| Constraint | Switched on by | Docs |
+|---|---|---|
+| Require visit dependency prerequisite assigned | `visits[].visitDependencies[].precedingVisit` on B. Penalizes B being assigned while A, its preceding visit, is unassigned | [Single visit dependency](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_single_visit_dependency) |
+| Require visit dependency dependent assigned | A dependency whose assignment type is `DISALLOW_TO_BLOCK_FOLLOWING` (the default, also set dataset-wide by `defaultDependencyAssignmentType`) | [Assignment type](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_assignment_type) |
+| Require visit dependency delay | `minDelayTo` / `maxDelayTo` on the dependency | [Dependency with delay](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_with_delay) |
+| Require the same vehicle for dependent visit | `coordination: SAME_VEHICLE` on the dependency | [Coordination](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_with_coordination) |
+| Require the same vehicle shift for dependent visit | `coordination: SAME_SHIFT`, **or any pooling type other than `ALLOW_POOLING_ALL`**, set on the dependency or inherited from `config.model.overrides.defaultDependencyPoolingType` | [Coordination](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_with_coordination), [Pooling type](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_pooling_type) |
+| Require visit dependency pooling type | `poolingType` other than `ALLOW_POOLING_ALL`, on the dependency or from `defaultDependencyPoolingType` | [Pooling type](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_pooling_type) |
+| Keep a pinned visit's vehicle shift | `pinningRequested: true` on the visit, or `pin: true` on an itinerary item | [Pinning individual visits](https://docs.timefold.ai/field-service-routing/latest/real-time-planning/real-time-planning-pinning-visits#_pinning_individual_visits) |
+| Keep a pinned visit's start service time | `pin: true` with `startServiceTime` on `vehicles[].shifts[].itinerary[]` | [Pinning individual visits](https://docs.timefold.ai/field-service-routing/latest/real-time-planning/real-time-planning-pinning-visits#_pinning_individual_visits) |
+
+For a hard constraint that is not in this table, find its page in the
+[FSR user guide](https://docs.timefold.ai/field-service-routing/latest/) before you explain it.
+Don't link a URL that you did not open.
+
+### Visit dependencies: what each part means
+
+- **A plain dependency only orders the visits.** With only `precedingVisit` (and optionally a
+  delay), B starts no sooner than A ends, and B is not assigned unless A is. A and B can be on
+  different vehicles and on different days. A plain dependency does not mean "same vehicle" or
+  "same shift".
+- **A pooling type other than `ALLOW_POOLING_ALL` implicitly adds `SAME_SHIFT`.** Pooling controls
+  whether other visits can sit between A and B. When the pooling type is `ALLOW_POOLING_VISITS`,
+  `ALLOW_POOLING_DEPENDENCIES`, or `DISALLOW_POOLING`, the model sets the dependency's coordination
+  to `SAME_SHIFT` (unless it is already `SAME_SHIFT_ENFORCE`). The input record then shows no
+  `coordination` field, yet the "same vehicle shift" constraint still applies.
+- **The pooling type often comes from the dataset default.** A dependency without its own
+  `poolingType` takes `config.model.overrides.defaultDependencyPoolingType`. `summarize.py` prints
+  it under "Configuration overrides". At level 3 or 4, read it from `GET {collection}/{id}/config`.
+
+### Known conflict: recurring visits chained with dependencies
+
+Recurring work (a weekly visit for four weeks) is often modeled as a dependency chain, so that week 2
+is not planned without week 1. That is a valid use of a plain dependency. It breaks when the
+dependencies get `SAME_SHIFT`, because visits on different dates can never share one vehicle shift.
+If the visits are also pinned to their dated shifts, the solver cannot move them, and every link
+in the chain stays a hard violation of "Require the same vehicle shift for dependent visit".
+
+Explain it as three settings that combine, each with its docs link: the dependency chain, the
+pooling type that implies `SAME_SHIFT`, and the pinning. The fix that keeps the user's intent is
+`poolingType: ALLOW_POOLING_ALL` on those dependencies, or as the dataset default if no other
+dependency needs a stricter pooling type. Do not propose to remove the dependencies: that drops the
+"week 2 only after week 1" rule.
 
 ## Full instructions
 

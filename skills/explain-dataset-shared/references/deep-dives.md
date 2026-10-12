@@ -29,6 +29,29 @@ under current constraints. Explain which constraints block every candidate, e.g.
 - "All eligible resources are already at capacity for that time slot"
 - "Assigning any candidate would exceed their weekly hour limit"
 
+## Why does a hard violation remain after solving?
+
+Follow "Explain every hard violation" in the shared `SKILL.md`: involved items, their raw input
+records, the dataset configuration, pinning, and a docs link for each setting. Three points
+matter most in a deep dive:
+
+- **The constraint name is not the cause.** "Require the same vehicle shift" does not mean the
+  input asked for the same shift. Find the field or the dataset default that switched the rule on.
+- **Pinned items explain why the solver did not repair it.** The solver cannot move them, so a
+  pinned placement that conflicts with another rule stays a hard violation. Check the pinning
+  fields of every involved item before you explain why the solver "chose" the placement.
+- **Input that is infeasible by itself has the same effect.** Input validation catches simple
+  cases, such as overlapping breaks, but not all of them. In Field Service Routing, a fixed break
+  that starts too soon after another fixed break or after the shift start, or a fixed or floating
+  break after the shift end, causes a hard penalty that the solver cannot resolve. Check the
+  breaks of every involved shift (`vehicles[].shifts[].requiredBreaks[]`) against the shift's
+  times and against each other.
+  ([Lunch breaks and personal appointments](https://docs.timefold.ai/field-service-routing/latest/vehicle-resource-constraints/lunch-breaks-and-personal-appointments))
+
+To test a fix before the user resubmits, change the suspect setting in the input or the
+configuration and use the comparison technique below. The score analysis shows whether the hard
+violations go away.
+
 ## Comparing two scenarios: the most powerful explanation technique
 
 To understand why a specific assignment was or wasn't made, the most effective approach is:

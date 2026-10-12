@@ -105,7 +105,7 @@ first tells you the absolute path as `$SCRIPTS`.
 
 | Script | Purpose |
 |---|---|
-| `summarize.py` | **Start here.** Coverage KPIs, validation warnings, resource overview |
+| `summarize.py` | **Start here.** Coverage KPIs, validation warnings, dataset configuration overrides, resource overview |
 | `list_unassigned.py` | Unassigned work items with input details; `--recommendations` for bulk API hints |
 | `resource_metrics.py` | Per-resource metrics table; `--sort` to rank by overtime / travel / etc. |
 | `work_details.py` | Look up specific work items by ID; or all items for `--resource NAME` |
@@ -289,6 +289,8 @@ Use this exact format:
 
 ```
 - **[IMPACT: High]** <Bottleneck description: pattern-level, not a specific item ID>
+  - **Cause:** <Setting: where it is in the input or config, what it does> ([docs](<URL>))
+  - **Cause:** <Next setting in the chain> ([docs](<URL>))
   - **[Confidence: High]** <Proposal: what input change, config change, or action would address this>
   - **[Confidence: Medium]** <Alternative proposal>
 - **[IMPACT: Medium]** <Next bottleneck>
@@ -316,15 +318,80 @@ Use this exact format:
 - State a concrete action: an input change, a configuration adjustment, or a data correction
 - Be specific about *what* to change, not just *that* something should change
 - If a proposal requires more investigation first, say so and lower its likelihood accordingly
+- Before you propose to remove or relax an input element (a dependency, a pin, a skill, a time
+  window), say which business rule it expresses and what the plan loses without it. Prefer the
+  smallest change that keeps that rule. If you don't know why the user added it, ask before you
+  recommend removing it
+
+`Cause:` lines are required for every hard violation (see "Explain every hard violation" below)
+and welcome for any other bottleneck whose cause is a setting. Put them before the proposals.
 
 Sort bottlenecks by impact (High → Medium → Low). Within the same impact level, sort by severity
 (e.g. mandatory unassignment before soft violations). Sort proposals within each bottleneck by confidence (High → Low).
 
 Only name specific item or resource IDs as illustrative examples within a bottleneck entry, never as the primary finding.
 
+### Explain every hard violation
+
+A hard violation makes the plan unworkable, so its cause belongs in the first answer. The user
+should not have to ask five follow-up questions to get it. A constraint name tells you which rule
+broke. It does not tell you why the rule applies to these items. Find that out before you write the
+bottleneck. Do these steps for each hard constraint with matches. At level 3 or 4, get the same
+data from the score analysis, `/input`, and `/config` endpoints in `references/api-fallback.md`.
+
+1. **Find the involved items.** Run `score_justifications.py --type hard --constraint "<name>"`
+   and note the work item and resource IDs in the matches.
+2. **Read their raw input records.** Run `work_details.py --work-ids <IDs>`. Note every field that
+   relates to the broken rule. If no field in the record asks for the rule, the rule comes from
+   somewhere else. Go to step 3. Don't conclude that the input asked for it.
+3. **Read the dataset configuration.** `summarize.py` prints `config.model.overrides`. A
+   `default...` setting there applies to every item that does not set its own value. If the
+   model-specific skill has notes on hard constraints, read them: some settings switch on other
+   rules implicitly.
+4. **Check pinning.** The solver cannot move a pinned item. If the involved items are pinned, the
+   pinned placement and the broken rule conflict, and only the user can resolve it. This is a
+   common reason a hard violation survives a completed solve. Pinning fields differ per model
+   (for example `pinningRequested`, `pinned`, or `pin`), so look for them in the input record.
+   Input that is infeasible by itself has the same effect, for example a break that cannot fit
+   in its shift. See "Why does a hard violation remain after solving?" in
+   `references/deep-dives.md`.
+5. **Find the docs page for each setting in the chain.** Use the links in the model-specific
+   skill. For a setting that is not listed there, find its page in the model's user guide. Only
+   link a page you opened.
+
+Then write the bottleneck with one `Cause:` line per setting in the chain. Each line names the
+setting, gives its JSON path (with an item ID as an example), says in one sentence what it does,
+and links its docs page. The user can then read about each part. After the causes, say in one
+sentence why the settings cannot all hold at once. Example from Field Service Routing:
+
+```
+- **[IMPACT: High]** A chain of four weekly visits breaks "Require the same vehicle shift for
+  dependent visit" three times, once per link. Three settings combine to cause this:
+  - **Cause:** Each visit depends on the previous week's visit
+    (`visits[].visitDependencies[].precedingVisit`, e.g. B → A). By itself, this only means that B
+    starts after A ends. ([Visit dependencies](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_single_visit_dependency))
+  - **Cause:** The dependencies set no `poolingType`, so they take the dataset default
+    `config.model.overrides.defaultDependencyPoolingType: DISALLOW_POOLING`. Any pooling type other
+    than `ALLOW_POOLING_ALL` automatically sets the coordination to `SAME_SHIFT`.
+    ([Pooling type](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_pooling_type))
+  - **Cause:** The visits are pinned to shifts on different dates (`pinningRequested: true`), so
+    the solver cannot move them into one shift.
+    ([Pinning visits](https://docs.timefold.ai/field-service-routing/latest/real-time-planning/real-time-planning-pinning-visits#_pinning_individual_visits))
+  - A visit in week 1 and a visit in week 2 can never share one vehicle shift, so all three
+    links stay violated.
+  - **[Confidence: High]** Set `poolingType: ALLOW_POOLING_ALL` on these dependencies. This keeps
+    "week 2 only after week 1" and drops the same-shift requirement.
+```
+
+**Say only what you checked.** Write "the input sets X" only after you read X in the input record
+or the configuration. If you infer a cause, say so, and say which call would confirm it. When the
+user challenges a conclusion, read the data again before you answer. Don't hold a claim that the
+data doesn't support, and don't drop one that it does.
+
 ### When to use constraint scores
 
-Only bring in `score_violations.py` when:
+Hard violations are always traced (see above). For everything else, only bring in
+`score_violations.py` when:
 - The user explicitly asks "why specifically?" or "what's blocking this?"
 - You need to identify the structural root cause of unassignment
 
@@ -518,6 +585,8 @@ This skill is used by planners and operations managers, not necessarily solver e
 
 - Lead with operational outcomes: coverage, fairness, workload balance
 - **Never** open with the constraint score string. Translate it into plain language if it must come up
-- Constraint scores are a deep-dive option offered when the user asks "why?", not volunteered upfront
+- Constraint scores are a deep-dive option offered when the user asks "why?", not volunteered
+  upfront. Hard violations are the exception: explain their cause upfront, in plain language,
+  with a docs link for each setting involved
 - End each explanation with what the user can *do* about it
 - Be honest about uncertainty. If the solver chose between equally good options, say so

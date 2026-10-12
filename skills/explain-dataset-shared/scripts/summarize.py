@@ -21,7 +21,7 @@ import sys
 _DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _DIR)
 
-from timefold_api import model_api_get, fmt, seconds, parse_score, score_sort_key, constraint_type, add_common_args, resolve_args, run, platform_links, fmt_solver_status, get_tenant_name
+from timefold_api import model_api_get, fmt, seconds, parse_score, score_sort_key, constraint_type, add_common_args, resolve_args, run, platform_links, fmt_solver_status, get_tenant_name, TimefoldApiError
 from model_config import get_config, nested_get
 
 
@@ -59,6 +59,36 @@ def get_resource_flags(metrics, cfg):
                 flags.append("underutilized")
             break
     return flags
+
+
+def print_config_overrides(base, cp, did, key):
+    """Print the dataset-wide settings the dataset was solved with.
+
+    A default here (e.g. defaultDependencyPoolingType) applies to every work item that
+    sets no value of its own, so a hard violation can come from this block even when the
+    work item's own input record looks harmless.
+    """
+    try:
+        config = model_api_get(base, f"{cp}/{did}/config", key) or {}
+    except TimefoldApiError as error:
+        print(f"--- Configuration overrides: not available ({str(error).splitlines()[0]}) ---")
+        print()
+        return
+    overrides = {k: v for k, v in ((config.get("model") or {}).get("overrides") or {}).items() if v is not None}
+    if not overrides:
+        print("--- Configuration overrides: none (model defaults apply) ---")
+        print()
+        return
+    settings = {k: v for k, v in overrides.items() if not k.endswith("Weight")}
+    weights = {k: v for k, v in overrides.items() if k.endswith("Weight")}
+    print("--- Configuration overrides (config.model.overrides) ---")
+    pad = max((len(k) for k in settings), default=0)
+    for k in sorted(settings):
+        print(f"  {k:<{pad}} : {settings[k]}")
+    if weights:
+        print(f"  Weights: {', '.join(f'{k}={weights[k]}' for k in sorted(weights))}")
+    print("  A default here applies to every item that does not set its own value.")
+    print()
 
 
 def main():
@@ -162,6 +192,8 @@ def main():
         if len(warnings) > 5:
             print(f"  ... and {len(warnings) - 5} more (these may explain why some {wu_plural} can't be assigned)")
         print()
+
+    print_config_overrides(base, cp, did, key)
 
     # Constraint summary (pointer only — detail in score_violations.py)
     violations = sorted(
