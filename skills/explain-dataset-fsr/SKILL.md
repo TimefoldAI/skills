@@ -113,7 +113,7 @@ field or configuration setting that switches them on.
 
 | Constraint | Switched on by | Docs |
 |---|---|---|
-| Require visit dependency prerequisite assigned | `visits[].visitDependencies[].precedingVisit`. B stays unassigned while A is unassigned | [Single visit dependency](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_single_visit_dependency) |
+| Require visit dependency prerequisite assigned | `visits[].visitDependencies[].precedingVisit` on B. Penalizes B being assigned while A, its preceding visit, is unassigned | [Single visit dependency](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_single_visit_dependency) |
 | Require visit dependency dependent assigned | A dependency whose assignment type is `DISALLOW_TO_BLOCK_FOLLOWING` (the default, also set dataset-wide by `defaultDependencyAssignmentType`) | [Assignment type](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_assignment_type) |
 | Require visit dependency delay | `minDelayTo` / `maxDelayTo` on the dependency | [Dependency with delay](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_with_delay) |
 | Require the same vehicle for dependent visit | `coordination: SAME_VEHICLE` on the dependency | [Coordination](https://docs.timefold.ai/field-service-routing/latest/visit-service-constraints/visit-dependencies#_visit_dependency_with_coordination) |

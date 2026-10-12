@@ -352,6 +352,9 @@ data from the score analysis, `/input`, and `/config` endpoints in `references/a
    pinned placement and the broken rule conflict, and only the user can resolve it. This is a
    common reason a hard violation survives a completed solve. Pinning fields differ per model
    (for example `pinningRequested`, `pinned`, or `pin`), so look for them in the input record.
+   Input that is infeasible by itself has the same effect, for example a break that cannot fit
+   in its shift. See "Why does a hard violation remain after solving?" in
+   `references/deep-dives.md`.
 5. **Find the docs page for each setting in the chain.** Use the links in the model-specific
    skill. For a setting that is not listed there, find its page in the model's user guide. Only
    link a page you opened.
