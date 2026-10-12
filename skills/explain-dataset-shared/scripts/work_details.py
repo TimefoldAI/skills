@@ -21,6 +21,7 @@ Usage:
     python work_details.py --model pickup-delivery-routing --dataset-id ID --work-ids "job-001"
 """
 import argparse
+import json
 import os
 import sys
 
@@ -174,6 +175,8 @@ def _print_work_details(item, cfg):
             formatted = fmt_time_windows(val)
         elif label == "Service duration":
             formatted = fmt(val)
+        elif isinstance(val, (list, dict)):
+            formatted = json.dumps(val)
         else:
             formatted = str(val)
         if formatted:

@@ -106,7 +106,17 @@ GET {base}/{collection}/{id}/score-analysis?includeJustifications=true
 ```
 Look at `constraints[]` where `matchCount > 0`. Sort by score impact. Check hard/medium violations first.
 
-**Step 3. Fetch input** (only if you need work item details, e.g. for unassigned items):
+**Step 3. Fetch the dataset configuration:**
+```
+GET {base}/{collection}/{id}/config
+```
+Read `model.overrides`. Any setting there that is not a weight (its name does not end in
+`Weight`) applies dataset-wide, to every item that does not set its own value. A hard violation
+can come from a default here even when the item's own input record looks harmless. List these
+settings, as `summarize.py` does.
+
+**Step 4. Fetch input** (only if you need work item details, e.g. for unassigned items or for the
+items in a hard violation):
 ```
 GET {base}/{collection}/{id}/input
 ```
@@ -137,7 +147,7 @@ Navigate the resource list in `modelOutput`. Each entry has a `metrics` object:
 | `SOLVING_STARTED` | Loading input, solving not yet active |
 | `SOLVING_ACTIVE` | Still optimizing, results may improve |
 | `SOLVING_INCOMPLETE` | Terminated before a solution was found |
-| `SOLVING_COMPLETED` | Final, no further solution will be generated |
+| `SOLVING_COMPLETED` | Final, no further solution will be generated. Not a feasibility verdict: check the hard score |
 | `SOLVING_FAILED` | Error, solving was unsuccessful |
 
 ## API reference
@@ -149,6 +159,7 @@ Every request also takes ?tfSource=timefold-skills.<skill>.<how>~<version>
 GET  {base}/{collection}/{id}                                    # Full solution + KPIs + resource metrics
 GET  {base}/{collection}/{id}/metadata                           # Solver status only (fast)
 GET  {base}/{collection}/{id}/input                              # Full input data
+GET  {base}/{collection}/{id}/config                             # Configuration used: model.overrides
 GET  {base}/{collection}/{id}/score-analysis?includeJustifications=true
 POST {base}/{collection}/score-analysis?includeJustifications=true   # Score-analyse a modified plan
 GET  {base}/{collection}/{id}/validation-result                  # Input data quality issues

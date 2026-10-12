@@ -178,6 +178,8 @@ MODEL_CONFIGS = {
             ("Service duration", "serviceDuration"),
             ("Time windows",     "timeWindows"),
             ("Priority",         "priority"),
+            ("Pinning requested", "pinningRequested"),
+            ("Dependencies",     "visitDependencies"),
         ],
 
         # Recommendation endpoints: FSR recommends time windows in bulk for a batch of
