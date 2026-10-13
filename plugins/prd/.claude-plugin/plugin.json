@@ -1,7 +1,7 @@
 {
     "name": "prd",
     "displayName": "Timefold PRD",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Define the requirements of an optimization model with the Timefold PRD Chat connector, and follow the interview's checklist in a pane in Claude Code.",
     "author": {
         "name": "Timefold",

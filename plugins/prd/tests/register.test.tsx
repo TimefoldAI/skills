@@ -408,13 +408,7 @@ const SUBMITTABLE: InterviewProgress = {
 
 type McpCall = { server: string; tool: string; args: Record<string, unknown> };
 
-// why: $.ui.ask runs the AskUserQuestion dialog, so the test answers each question in turn
-function answerSubmitDialog(
-    on: On,
-    progress: InterviewProgress,
-    answers: string[],
-) {
-    const questions: string[] = [];
+function answerSubmit(on: On, progress: InterviewProgress) {
     const calls: McpCall[] = [];
     const toasts: string[] = [];
     const submitted: string[] = [];
@@ -423,21 +417,6 @@ function answerSubmitDialog(
         result: [],
         text: "Recorded.",
     }));
-    on("tool.call", { tool: "AskUserQuestion" }, ($, e) => {
-        const [question] = e.questions;
-        const answer = answers.shift();
-
-        questions.push(question?.question ?? "");
-        if (answer === undefined || question === undefined)
-            throw new Error("dismissed");
-
-        return {
-            result: {
-                questions: e.questions,
-                answers: { [question.question]: answer },
-            },
-        };
-    });
     on("mcp.call", ($, e) => {
         calls.push(e);
 
@@ -469,15 +448,14 @@ function answerSubmitDialog(
     });
 
     return {
-        questions,
         toasts,
         submitted,
         submits: () => calls.filter((call) => call.tool === "submit_for_build"),
     };
 }
 
-test("Submit for build confirms like PRD Chat's dialog, then hands the current PRD over with the sign-in email", async ($, on) => {
-    const dialog = answerSubmitDialog(on, SUBMITTABLE, ["Submit"]);
+test("Submit for build confirms in the pane like PRD Chat's dialog, then hands the current PRD over with the sign-in email", async ($, on) => {
+    const dialog = answerSubmit(on, SUBMITTABLE);
 
     await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
     const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
@@ -487,10 +465,18 @@ test("Submit for build confirms like PRD Chat's dialog, then hands the current P
     );
     await ui.press({ key: "submit-build" });
 
-    expect(dialog.questions).toEqual([
-        "We send your requirements document, as Markdown and PDF, to our solutions team. " +
-            "Contact email: alice@example.com. Submit for build?",
-    ]);
+    expect(await ui.find({ text: "Submit for build?" })).toBeDefined();
+    expect(
+        await ui.find({ text: /as Markdown and\s+PDF, to our solutions team/ }),
+    ).toBeDefined();
+    expect(
+        await ui.find({ text: "Contact email: alice@example.com" }),
+    ).toBeDefined();
+    expect(await ui.find({ key: "submit-build" })).toBeUndefined();
+    expect(dialog.submits()).toEqual([]);
+
+    await ui.press({ key: "confirm-submit" });
+
     expect(dialog.submits()).toEqual([
         {
             server: "prd-chat",
@@ -502,66 +488,140 @@ test("Submit for build confirms like PRD Chat's dialog, then hands the current P
         "PRD Chat: submitted. Our solutions team will contact you at alice@example.com.",
     );
     expect(dialog.submitted).toEqual([]);
+    expect(await ui.find({ key: "submit-build" })).toBeDefined();
 });
 
-test("Change email asks for the email and confirms again with the new one", async ($, on) => {
-    const dialog = answerSubmitDialog(on, SUBMITTABLE, [
-        "Change email",
-        "ops@example.com",
-        "Submit",
-    ]);
+test("the confirmation shows while Claude's question stays open, and asks no question of its own", async ($, on) => {
+    const dialog = answerSubmit(on, SUBMITTABLE);
+    const questions: string[] = [];
+    let answerQuestion = (_answer: string) => {};
+
+    on("tool.call", { tool: "AskUserQuestion" }, ($, e) => {
+        const [question] = e.questions;
+
+        questions.push(question?.question ?? "");
+
+        return new Promise((resolve) => {
+            answerQuestion = (answer) =>
+                resolve({
+                    result: {
+                        questions: e.questions,
+                        answers: { [question?.question ?? ""]: answer },
+                    },
+                });
+        });
+    });
+    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
+    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
+    const asked = $.tool.call({
+        tool: "AskUserQuestion",
+        questions: [
+            {
+                question: "Can a driver carry only a few pizzas?",
+                header: "Capacity",
+                options: [
+                    { label: "Yes", description: "A fixed number" },
+                    { label: "No limit", description: "Any number" },
+                ],
+                multiSelect: false,
+            },
+        ],
+    });
+
+    await ui.press({ key: "submit-build" });
+
+    expect(await ui.find({ text: "Submit for build?" })).toBeDefined();
+    await ui.press({ key: "confirm-submit" });
+
+    expect(dialog.submits()).toHaveLength(1);
+    expect(questions).toEqual(["Can a driver carry only a few pizzas?"]);
+
+    answerQuestion("Yes");
+    expect((await asked).result).toMatchObject({
+        answers: { "Can a driver carry only a few pizzas?": "Yes" },
+    });
+});
+
+test("Change email opens a field, and Submit then uses the new email", async ($, on) => {
+    const dialog = answerSubmit(on, SUBMITTABLE);
 
     await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
     const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
 
     await ui.press({ key: "submit-build" });
+    await ui.press({ key: "change-email" });
 
-    expect(dialog.questions[2]).toContain("Contact email: ops@example.com.");
+    expect((await ui.find({ key: "contact-email" }))?.props.value).toBe(
+        "alice@example.com",
+    );
+    await ui.input({ key: "contact-email", text: " ops@example.com " });
+
+    expect(
+        await ui.find({ text: "Contact email: ops@example.com" }),
+    ).toBeDefined();
+    await ui.press({ key: "confirm-submit" });
+
     expect(dialog.submits().map((call) => call.args.contactEmail)).toEqual([
         "ops@example.com",
     ]);
 });
 
-test("a typed text that is no email keeps the old email", async ($, on) => {
-    const dialog = answerSubmitDialog(on, SUBMITTABLE, [
-        "Change email",
-        "not an email",
-        "Submit",
-    ]);
+test("the mobile app, which draws no text field, offers no Change email", async ($, on) => {
+    const dialog = answerSubmit(on, SUBMITTABLE);
 
     await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
-    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
+    const ui = await $.ui.mount({ ...PANE, surface: "mobile" });
 
     await ui.press({ key: "submit-build" });
 
-    expect(dialog.toasts).toContain(
-        'PRD Chat: "not an email" is not an email address.',
-    );
+    expect(await ui.find({ key: "change-email" })).toBeUndefined();
+    await ui.press({ key: "confirm-submit" });
+
     expect(dialog.submits().map((call) => call.args.contactEmail)).toEqual([
         "alice@example.com",
     ]);
 });
 
-test("Cancel, or closing the dialog, sends nothing", async ($, on) => {
-    const dialog = answerSubmitDialog(on, SUBMITTABLE, ["Cancel"]);
+test("a typed text that is no email keeps the field open and the old email", async ($, on) => {
+    const dialog = answerSubmit(on, SUBMITTABLE);
 
     await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
     const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
 
     await ui.press({ key: "submit-build" });
-    await ui.press({ key: "submit-build" });
+    await ui.press({ key: "change-email" });
+    await ui.input({ key: "contact-email", text: "not an email" });
 
-    expect(dialog.questions).toHaveLength(2);
+    expect(dialog.toasts).toContain(
+        'PRD Chat: "not an email" is not an email address.',
+    );
+    expect((await ui.find({ key: "contact-email" }))?.props.value).toBe(
+        "alice@example.com",
+    );
+    await ui.press({ key: "confirm-submit" });
+
+    expect(dialog.submits().map((call) => call.args.contactEmail)).toEqual([
+        "alice@example.com",
+    ]);
+});
+
+test("Cancel closes the confirmation and sends nothing", async ($, on) => {
+    const dialog = answerSubmit(on, SUBMITTABLE);
+
+    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
+    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
+
+    await ui.press({ key: "submit-build" });
+    await ui.press({ key: "cancel-submit" });
+
+    expect(await ui.find({ key: "submit-confirmation" })).toBeUndefined();
+    expect(await ui.find({ key: "submit-build" })).toBeDefined();
     expect(dialog.submits()).toEqual([]);
     expect(dialog.submitted).toEqual([]);
 });
 
 test("without a current PRD, Submit asks Claude for the PRD and submits once it is saved", async ($, on) => {
-    const dialog = answerSubmitDialog(
-        on,
-        { ...SUBMITTABLE, hasCurrentPrd: false },
-        ["Submit"],
-    );
+    const dialog = answerSubmit(on, { ...SUBMITTABLE, hasCurrentPrd: false });
 
     on("tool.call", { tool: SAVE_TOOL }, () => ({
         result: [],
@@ -571,6 +631,7 @@ test("without a current PRD, Submit asks Claude for the PRD and submits once it 
     const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
 
     await ui.press({ key: "submit-build" });
+    await ui.press({ key: "confirm-submit" });
 
     expect(dialog.submitted).toEqual(["Please write the PRD now."]);
     expect(dialog.submits()).toEqual([]);
@@ -597,12 +658,6 @@ test("a refused submit says why in a toast", async ($, on) => {
     on("tool.call", { tool: TURN_TOOL }, () => ({
         result: [],
         text: "Recorded.",
-    }));
-    on("tool.call", { tool: "AskUserQuestion" }, ($, e) => ({
-        result: {
-            questions: e.questions,
-            answers: { [e.questions[0]?.question ?? ""]: "Submit" },
-        },
     }));
     on("mcp.call", ($, e) =>
         e.tool === "submit_for_build"
@@ -636,6 +691,7 @@ test("a refused submit says why in a toast", async ($, on) => {
     const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
 
     await ui.press({ key: "submit-build" });
+    await ui.press({ key: "confirm-submit" });
 
     expect(toasts).toContain(
         "PRD Chat: not submitted: We couldn't send your requirements. Try again in a moment.",
@@ -643,14 +699,14 @@ test("a refused submit says why in a toast", async ($, on) => {
 });
 
 test("an older connector without the sign-in email is told apart", async ($, on) => {
-    const dialog = answerSubmitDialog(on, PROGRESS, ["Submit"]);
+    const dialog = answerSubmit(on, PROGRESS);
 
     await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
     const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
 
     await ui.press({ key: "submit-build" });
 
-    expect(dialog.questions).toEqual([]);
+    expect(await ui.find({ key: "submit-confirmation" })).toBeUndefined();
     expect(dialog.toasts).toContain(
         "PRD Chat: this connector cannot submit for build yet.",
     );
