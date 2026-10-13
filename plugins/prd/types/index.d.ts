@@ -16,12 +16,19 @@ export type InterviewProgress = {
     hasCurrentPrd?: boolean;
 };
 
+export type SubmitConfirmation = {
+    interviewId: string;
+    contactEmail: string;
+    isEditingEmail: boolean;
+};
+
 declare module "claude-code" {
     interface PluginState {
         "prd": {
             progress: InterviewProgress | null;
             expandedIds: string[];
             server: string | null;
+            confirmation: SubmitConfirmation | null;
         };
     }
 }

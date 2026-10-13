@@ -15,10 +15,11 @@ The plugin has two parts:
   topic to see what Claude captured. On a topic that is not covered, press **Talk about this** to
   make Claude ask about that topic next. **Download report** asks Claude to write the PRD and saves
   it in the session folder, with the same file name as the website gives it, such as
-  `plan-van-routes-PRD-3F9A2C.md`. **Submit for build** asks for your confirmation in the same dialog
-  as the PRD Chat website: "We send your requirements document, as Markdown and PDF, to our solutions
-  team", with your sign-in email as the contact email. Select **Change email** to use another email.
-  When you select **Submit**, the pane sends the PRD to Timefold. If Claude has not saved the PRD
+  `plan-van-routes-PRD-3F9A2C.md`. **Submit for build** shows the same confirmation in the pane as the
+  PRD Chat website: "We send your requirements document, as Markdown and PDF, to our solutions
+  team", with your sign-in email as the contact email. The confirmation does not wait for the question
+  Claude asks now. Select **Change email** and type another email in the field. When you select
+  **Submit**, the pane sends the PRD to Timefold. If Claude has not saved the PRD
   since your last answer, Claude writes it first, and the pane then sends it. In Claude chat and Cowork,
   ask Claude to submit for build: Claude asks you the same question first.
 
@@ -52,7 +53,7 @@ So the mod approves these two calls itself, through a `tool.check` hook (see
 
 - It approves only a tool whose name ends in `__get_interview_progress`, or in
   `__submit_for_build`. The pane calls `submit_for_build` only after you select **Submit** in its
-  confirmation dialog, and that selection is your consent.
+  confirmation, and that selection is your consent.
 - It approves only the calls the mod itself makes (`next.origin.plugin` is this plugin). When
   Claude calls the same tool, the usual permission decision applies.
 - It approves nothing else. Every other tool call goes to your rules, your hooks and your

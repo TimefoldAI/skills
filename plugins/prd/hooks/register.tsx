@@ -1,7 +1,11 @@
 import { atom, read, update } from "claude-code";
 import type { EngineInterface, McpToolResult, Register } from "claude-code";
 
-import type { InterviewProgress, InterviewSection } from "../types";
+import type {
+    InterviewProgress,
+    InterviewSection,
+    SubmitConfirmation,
+} from "../types";
 
 const PANE = { id: "prd-chat", title: "Requirements coverage" };
 const INTERVIEW_TOOL =
@@ -9,9 +13,6 @@ const INTERVIEW_TOOL =
 const INTERVIEW_ID = /interviewId: (\S+)/;
 const SAVE_PRD_TOOL = /^mcp__(.+)__save_prd$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SUBMIT = "Submit";
-const CHANGE_EMAIL = "Change email";
-const CANCEL = "Cancel";
 const REFERENCE_LENGTH = 6;
 const MAX_SLUG_LENGTH = 60;
 const BAR_WIDTH = 20;
@@ -31,6 +32,10 @@ const expandedIds = atom(
     [],
 );
 const interviewServer = atom({ plugin: "prd", key: "server" } as const, null);
+const confirmation = atom(
+    { plugin: "prd", key: "confirmation" } as const,
+    null,
+);
 
 type Status = "open" | "inProgress" | "covered";
 
@@ -186,37 +191,6 @@ function resultText(result: McpToolResult) {
         .trim();
 }
 
-async function askContactEmail($: EngineInterface, current: string) {
-    const answer = await $.ui.ask(
-        "Which email should our solutions team contact? Type it under Other.",
-        { header: "Email", options: [current, CANCEL] },
-    );
-    const email = answer.trim();
-
-    if (answer === CANCEL || email === current) return current;
-    if (EMAIL.test(email)) return email;
-    $.ui.toast(`PRD Chat: "${email}" is not an email address.`);
-
-    return current;
-}
-
-// why: the same confirmation as PRD Chat's Submit for build dialog, which is the user's consent to the handoff
-async function confirmSubmit($: EngineInterface, email: string) {
-    let contact = email;
-
-    for (;;) {
-        const choice = await $.ui.ask(
-            "We send your requirements document, as Markdown and PDF, to our solutions team. " +
-                `Contact email: ${contact}. Submit for build?`,
-            { header: "Build", options: [SUBMIT, CHANGE_EMAIL, CANCEL] },
-        );
-
-        if (choice === SUBMIT) return contact;
-        if (choice !== CHANGE_EMAIL) return undefined;
-        contact = await askContactEmail($, contact);
-    }
-}
-
 async function submitForBuild(
     $: EngineInterface,
     interviewId: string,
@@ -244,23 +218,50 @@ async function submitForBuild(
     );
 }
 
-async function requestSubmit($: EngineInterface, interview: InterviewProgress) {
+// why: the confirmation is drawn in the pane, not with $.ui.ask, which waits behind the interview's open question
+async function openConfirmation(
+    $: EngineInterface,
+    interview: InterviewProgress,
+) {
     if (interview.contactEmail === undefined) {
         $.ui.toast("PRD Chat: this connector cannot submit for build yet.");
 
         return;
     }
-    const contactEmail = await confirmSubmit($, interview.contactEmail).catch(
-        () => undefined,
-    );
+    const contactEmail = interview.contactEmail;
 
-    if (contactEmail === undefined) return;
-    if (interview.hasCurrentPrd) {
-        await submitForBuild($, interview.interviewId, contactEmail);
+    await update($, confirmation, () => ({
+        interviewId: interview.interviewId,
+        contactEmail,
+        isEditingEmail: false,
+    }));
+}
+
+async function changeContactEmail($: EngineInterface, typed: string) {
+    const email = typed.trim();
+
+    if (!EMAIL.test(email)) {
+        $.ui.toast(`PRD Chat: "${email}" is not an email address.`);
 
         return;
     }
-    pendingSubmitEmail = contactEmail;
+    await update($, confirmation, (current) =>
+        current && { ...current, contactEmail: email, isEditingEmail: false },
+    );
+}
+
+// why: Submit in PRD Chat's confirmation is the user's consent to the handoff
+async function confirmSubmit($: EngineInterface, confirmed: SubmitConfirmation) {
+    const interview = await read($, progress);
+
+    await update($, confirmation, () => null);
+    if (interview?.interviewId !== confirmed.interviewId) return;
+    if (interview.hasCurrentPrd) {
+        await submitForBuild($, interview.interviewId, confirmed.contactEmail);
+
+        return;
+    }
+    pendingSubmitEmail = confirmed.contactEmail;
     $.ui.toast("PRD Chat: Claude writes the requirements document first.");
     sendAsUser($, "Please write the PRD now.");
 }
@@ -399,9 +400,16 @@ export const register: Register = (on) => {
     });
 
     on("ui.render", { component: "Pane", requestId: PANE.id }, async ($, e) => {
-        const { Box, Text, Button } = $.ui.resolve(e);
+        const elements = $.ui.resolve(e);
+        const { Box, Text, Button } = elements;
+        // why: the mobile app draws no text field, so there the sign-in email is the only contact email
+        const Input =
+            e.surface !== "mobile" && "Input" in elements
+                ? elements.Input
+                : undefined;
         const interview = await read($, progress);
         const expanded = await read($, expandedIds);
+        const confirming = await read($, confirmation);
 
         if (interview === null)
             return (
@@ -493,19 +501,82 @@ export const register: Register = (on) => {
                         );
                     })}
                 </Box>
-                <Box gap={1}>
-                    <Button
-                        key="download-report"
-                        label="Download report"
-                        onPress={requestDownload}
-                    />
-                    <Button
-                        key="submit-build"
-                        variant="primary"
-                        label="Submit for build"
-                        onPress={() => requestSubmit($, interview)}
-                    />
-                </Box>
+                {confirming?.interviewId === interview.interviewId ? (
+                    <Box
+                        key="submit-confirmation"
+                        flexDirection="column"
+                        borderStyle="round"
+                        paddingX={1}
+                    >
+                        <Text bold>Submit for build?</Text>
+                        <Text>
+                            We send your requirements document, as Markdown and
+                            PDF, to our solutions team.
+                        </Text>
+                        {Input && confirming.isEditingEmail ? (
+                            <Input
+                                key="contact-email"
+                                label="Contact email: "
+                                value={confirming.contactEmail}
+                                submitLabel="use"
+                                autoFocus
+                                onSubmit={(typed: string) =>
+                                    void changeContactEmail($, typed)
+                                }
+                            />
+                        ) : (
+                            <Box gap={1}>
+                                <Text>
+                                    {`Contact email: ${confirming.contactEmail}`}
+                                </Text>
+                                {Input && (
+                                    <Button
+                                        key="change-email"
+                                        plain
+                                        label="Change email"
+                                        onPress={() =>
+                                            update($, confirmation, (current) =>
+                                                current && {
+                                                    ...current,
+                                                    isEditingEmail: true,
+                                                },
+                                            )
+                                        }
+                                    />
+                                )}
+                            </Box>
+                        )}
+                        <Box gap={1}>
+                            <Button
+                                key="confirm-submit"
+                                variant="primary"
+                                label="Submit"
+                                onPress={() => confirmSubmit($, confirming)}
+                            />
+                            <Button
+                                key="cancel-submit"
+                                label="Cancel"
+                                onPress={() =>
+                                    update($, confirmation, () => null)
+                                }
+                            />
+                        </Box>
+                    </Box>
+                ) : (
+                    <Box gap={1}>
+                        <Button
+                            key="download-report"
+                            label="Download report"
+                            onPress={requestDownload}
+                        />
+                        <Button
+                            key="submit-build"
+                            variant="primary"
+                            label="Submit for build"
+                            onPress={() => openConfirmation($, interview)}
+                        />
+                    </Box>
+                )}
             </Box>
         );
     });
