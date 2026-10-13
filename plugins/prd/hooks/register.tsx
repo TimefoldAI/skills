@@ -7,7 +7,11 @@ const PANE = { id: "prd-chat", title: "Requirements coverage" };
 const INTERVIEW_TOOL =
     /^mcp__(.+)__(start_requirements_interview|record_interview_turn)$/;
 const INTERVIEW_ID = /interviewId: (\S+)/;
-const SAVE_PRD_TOOL = /^mcp__.+__save_prd$/;
+const SAVE_PRD_TOOL = /^mcp__(.+)__save_prd$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SUBMIT = "Submit";
+const CHANGE_EMAIL = "Change email";
+const CANCEL = "Cancel";
 const REFERENCE_LENGTH = 6;
 const MAX_SLUG_LENGTH = 60;
 const BAR_WIDTH = 20;
@@ -16,6 +20,7 @@ const MIDDLE_THRESHOLD = 50;
 
 let answerOpenQuestion: ((text: string) => void) | undefined;
 let isDownloadRequested = false;
+let pendingSubmitEmail: string | undefined;
 
 const progress = atom(
     { plugin: "prd", key: "progress" } as const,
@@ -25,6 +30,7 @@ const expandedIds = atom(
     { plugin: "prd", key: "expandedIds" } as const,
     [],
 );
+const interviewServer = atom({ plugin: "prd", key: "server" } as const, null);
 
 type Status = "open" | "inProgress" | "covered";
 
@@ -121,7 +127,7 @@ function progressOf(result: McpToolResult): unknown {
     if (result.structuredContent !== undefined) return result.structuredContent;
     // why: the server also sends a plain-text summary block, so try each text block
     return result.content
-        .map((block) => (block.type === "text" ? parsedJson(block.text) : undefined))
+        .map((block) => (block.type === "text" ? parsedJson(block.text ?? "") : undefined))
         .find(isInterviewProgress);
 }
 
@@ -173,6 +179,92 @@ async function downloadReport(
         );
 }
 
+function resultText(result: McpToolResult) {
+    return result.content
+        .map((block) => (block.type === "text" ? (block.text ?? "") : ""))
+        .join(" ")
+        .trim();
+}
+
+async function askContactEmail($: EngineInterface, current: string) {
+    const answer = await $.ui.ask(
+        "Which email should our solutions team contact? Type it under Other.",
+        { header: "Email", options: [current, CANCEL] },
+    );
+    const email = answer.trim();
+
+    if (answer === CANCEL || email === current) return current;
+    if (EMAIL.test(email)) return email;
+    $.ui.toast(`PRD Chat: "${email}" is not an email address.`);
+
+    return current;
+}
+
+// why: the same confirmation as PRD Chat's Submit for build dialog, which is the user's consent to the handoff
+async function confirmSubmit($: EngineInterface, email: string) {
+    let contact = email;
+
+    for (;;) {
+        const choice = await $.ui.ask(
+            "We send your requirements document, as Markdown and PDF, to our solutions team. " +
+                `Contact email: ${contact}. Submit for build?`,
+            { header: "Build", options: [SUBMIT, CHANGE_EMAIL, CANCEL] },
+        );
+
+        if (choice === SUBMIT) return contact;
+        if (choice !== CHANGE_EMAIL) return undefined;
+        contact = await askContactEmail($, contact);
+    }
+}
+
+async function submitForBuild(
+    $: EngineInterface,
+    interviewId: string,
+    contactEmail: string,
+) {
+    const server = await read($, interviewServer);
+
+    if (server === null) {
+        $.ui.toast("PRD Chat: the interview's connector is not known yet.");
+
+        return;
+    }
+    $.ui.toast("PRD Chat: sending your requirements to Timefold.");
+    const result = await $.mcp
+        .call(server, "submit_for_build", { interviewId, contactEmail })
+        .catch((error: unknown) => ({
+            content: [{ type: "text" as const, text: String(error) }],
+            isError: true,
+        }));
+
+    $.ui.toast(
+        result.isError
+            ? `PRD Chat: not submitted: ${resultText(result)}`
+            : `PRD Chat: submitted. Our solutions team will contact you at ${contactEmail}.`,
+    );
+}
+
+async function requestSubmit($: EngineInterface, interview: InterviewProgress) {
+    if (interview.contactEmail === undefined) {
+        $.ui.toast("PRD Chat: this connector cannot submit for build yet.");
+
+        return;
+    }
+    const contactEmail = await confirmSubmit($, interview.contactEmail).catch(
+        () => undefined,
+    );
+
+    if (contactEmail === undefined) return;
+    if (interview.hasCurrentPrd) {
+        await submitForBuild($, interview.interviewId, contactEmail);
+
+        return;
+    }
+    pendingSubmitEmail = contactEmail;
+    $.ui.toast("PRD Chat: Claude writes the requirements document first.");
+    sendAsUser($, "Please write the PRD now.");
+}
+
 async function refreshProgress(
     $: EngineInterface,
     server: string,
@@ -198,6 +290,7 @@ async function refreshProgress(
     }
 
     await update($, progress, () => loaded);
+    await update($, interviewServer, () => server);
     await $.ui.open(PANE);
 }
 
@@ -210,6 +303,17 @@ export const register: Register = (on) => {
                 ? {
                       decision: "allow",
                       reason: "The PRD Chat pane reads the interview's progress.",
+                  }
+                : next(e),
+    );
+    on(
+        "tool.check",
+        { tool: /^mcp__.+__submit_for_build$/ },
+        ($, e, next) =>
+            next.origin.plugin === $.plugin.name
+                ? {
+                      decision: "allow",
+                      reason: "The user confirmed Submit for build and the contact email in the PRD Chat pane.",
                   }
                 : next(e),
     );
@@ -271,7 +375,16 @@ export const register: Register = (on) => {
         const isSaved = ran.deny === undefined && !ran.isError;
         const markdown = markdownOf(e);
         const interviewId = interviewIdOf(e, undefined);
+        const server = SAVE_PRD_TOOL.exec(e.tool)?.[1];
 
+        if (isSaved && server && interviewId)
+            await refreshProgress($, server, interviewId);
+        if (isSaved && interviewId && pendingSubmitEmail !== undefined) {
+            const contactEmail = pendingSubmitEmail;
+
+            pendingSubmitEmail = undefined;
+            await submitForBuild($, interviewId, contactEmail);
+        }
         if (
             isDownloadRequested &&
             isSaved &&
@@ -390,7 +503,7 @@ export const register: Register = (on) => {
                         key="submit-build"
                         variant="primary"
                         label="Submit for build"
-                        onPress={() => undefined}
+                        onPress={() => requestSubmit($, interview)}
                     />
                 </Box>
             </Box>

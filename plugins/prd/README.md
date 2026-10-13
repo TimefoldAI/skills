@@ -15,7 +15,12 @@ The plugin has two parts:
   topic to see what Claude captured. On a topic that is not covered, press **Talk about this** to
   make Claude ask about that topic next. **Download report** asks Claude to write the PRD and saves
   it in the session folder, with the same file name as the website gives it, such as
-  `plan-van-routes-PRD-3F9A2C.md`. **Submit for build** is a placeholder and does nothing yet.
+  `plan-van-routes-PRD-3F9A2C.md`. **Submit for build** asks for your confirmation in the same dialog
+  as the PRD Chat website: "We send your requirements document, as Markdown and PDF, to our solutions
+  team", with your sign-in email as the contact email. Select **Change email** to use another email.
+  When you select **Submit**, the pane sends the PRD to Timefold. If Claude has not saved the PRD
+  since your last answer, Claude writes it first, and the pane then sends it. In Claude chat and Cowork,
+  ask Claude to submit for build: Claude asks you the same question first.
 
 The pane shows in the Claude Code terminal and in the Code tab of the Claude desktop app. In
 Claude on the web and in the desktop chat, the connector works without the pane.
@@ -39,18 +44,21 @@ The pane reads the interview's progress with one extra call to the connector, th
 `get_interview_progress`. The mod makes this call in the background after each interview step,
 not Claude, so no conversation stands behind it. In auto mode, the permission classifier then
 gives no verdict and refuses the call, and in the other modes you would get a permission prompt
-after each step.
+after each step. When you confirm **Submit for build** in the pane, the mod also calls
+`submit_for_build` itself, for the same reason.
 
-So the mod approves that one call itself, through a `tool.check` hook (see
+So the mod approves these two calls itself, through a `tool.check` hook (see
 [Extend permissions with hooks](https://code.claude.com/docs/en/permissions#extend-permissions-with-hooks)):
 
-- It approves only a tool whose name ends in `__get_interview_progress`.
+- It approves only a tool whose name ends in `__get_interview_progress`, or in
+  `__submit_for_build`. The pane calls `submit_for_build` only after you select **Submit** in its
+  confirmation dialog, and that selection is your consent.
 - It approves only the calls the mod itself makes (`next.origin.plugin` is this plugin). When
   Claude calls the same tool, the usual permission decision applies.
 - It approves nothing else. Every other tool call goes to your rules, your hooks and your
   permission mode as before.
 
-The tool only reads your own interview: the connector refuses an interview that belongs to
+Both tools work only on your own interview: the connector refuses an interview that belongs to
 another user. Deny rules from your organization's managed settings still hold over the mod.
 
 To see what the mod hooks and calls before you install it, run
