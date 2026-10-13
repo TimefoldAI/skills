@@ -472,6 +472,7 @@ test("Submit for build confirms in the pane like PRD Chat's dialog, then hands t
     expect(
         await ui.find({ text: "Contact email: alice@example.com" }),
     ).toBeDefined();
+    expect(await ui.find({ key: "change-email" })).toBeUndefined();
     expect(await ui.find({ key: "submit-build" })).toBeUndefined();
     expect(dialog.submits()).toEqual([]);
 
@@ -540,69 +541,6 @@ test("the confirmation shows while Claude's question stays open, and asks no que
     expect((await asked).result).toMatchObject({
         answers: { "Can a driver carry only a few pizzas?": "Yes" },
     });
-});
-
-test("Change email opens a field, and Submit then uses the new email", async ($, on) => {
-    const dialog = answerSubmit(on, SUBMITTABLE);
-
-    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
-    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
-
-    await ui.press({ key: "submit-build" });
-    await ui.press({ key: "change-email" });
-
-    expect((await ui.find({ key: "contact-email" }))?.props.value).toBe(
-        "alice@example.com",
-    );
-    await ui.input({ key: "contact-email", text: " ops@example.com " });
-
-    expect(
-        await ui.find({ text: "Contact email: ops@example.com" }),
-    ).toBeDefined();
-    await ui.press({ key: "confirm-submit" });
-
-    expect(dialog.submits().map((call) => call.args.contactEmail)).toEqual([
-        "ops@example.com",
-    ]);
-});
-
-test("the mobile app, which draws no text field, offers no Change email", async ($, on) => {
-    const dialog = answerSubmit(on, SUBMITTABLE);
-
-    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
-    const ui = await $.ui.mount({ ...PANE, surface: "mobile" });
-
-    await ui.press({ key: "submit-build" });
-
-    expect(await ui.find({ key: "change-email" })).toBeUndefined();
-    await ui.press({ key: "confirm-submit" });
-
-    expect(dialog.submits().map((call) => call.args.contactEmail)).toEqual([
-        "alice@example.com",
-    ]);
-});
-
-test("a typed text that is no email keeps the field open and the old email", async ($, on) => {
-    const dialog = answerSubmit(on, SUBMITTABLE);
-
-    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
-    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
-
-    await ui.press({ key: "submit-build" });
-    await ui.press({ key: "change-email" });
-    await ui.input({ key: "contact-email", text: "not an email" });
-
-    expect(dialog.toasts).toContain(
-        'PRD Chat: "not an email" is not an email address.',
-    );
-    expect((await ui.find({ key: "contact-email" }))?.props.value).toBe(
-        "alice@example.com",
-    );
-    await ui.press({ key: "confirm-submit" });
-
-    expect(dialog.submits().map((call) => call.args.contactEmail)).toEqual([
-        "alice@example.com",
-    ]);
 });
 
 test("Cancel closes the confirmation and sends nothing", async ($, on) => {

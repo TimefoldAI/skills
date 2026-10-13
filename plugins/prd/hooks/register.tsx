@@ -12,7 +12,6 @@ const INTERVIEW_TOOL =
     /^mcp__(.+)__(start_requirements_interview|record_interview_turn)$/;
 const INTERVIEW_ID = /interviewId: (\S+)/;
 const SAVE_PRD_TOOL = /^mcp__(.+)__save_prd$/;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REFERENCE_LENGTH = 6;
 const MAX_SLUG_LENGTH = 60;
 const BAR_WIDTH = 20;
@@ -233,21 +232,7 @@ async function openConfirmation(
     await update($, confirmation, () => ({
         interviewId: interview.interviewId,
         contactEmail,
-        isEditingEmail: false,
     }));
-}
-
-async function changeContactEmail($: EngineInterface, typed: string) {
-    const email = typed.trim();
-
-    if (!EMAIL.test(email)) {
-        $.ui.toast(`PRD Chat: "${email}" is not an email address.`);
-
-        return;
-    }
-    await update($, confirmation, (current) =>
-        current && { ...current, contactEmail: email, isEditingEmail: false },
-    );
 }
 
 // why: Submit in PRD Chat's confirmation is the user's consent to the handoff
@@ -400,13 +385,7 @@ export const register: Register = (on) => {
     });
 
     on("ui.render", { component: "Pane", requestId: PANE.id }, async ($, e) => {
-        const elements = $.ui.resolve(e);
-        const { Box, Text, Button } = elements;
-        // why: the mobile app draws no text field, so there the sign-in email is the only contact email
-        const Input =
-            e.surface !== "mobile" && "Input" in elements
-                ? elements.Input
-                : undefined;
+        const { Box, Text, Button } = $.ui.resolve(e);
         const interview = await read($, progress);
         const expanded = await read($, expandedIds);
         const confirming = await read($, confirmation);
@@ -513,39 +492,8 @@ export const register: Register = (on) => {
                             We send your requirements document, as Markdown and
                             PDF, to our solutions team.
                         </Text>
-                        {Input && confirming.isEditingEmail ? (
-                            <Input
-                                key="contact-email"
-                                label="Contact email: "
-                                value={confirming.contactEmail}
-                                submitLabel="use"
-                                autoFocus
-                                onSubmit={(typed: string) =>
-                                    void changeContactEmail($, typed)
-                                }
-                            />
-                        ) : (
-                            <Box gap={1}>
-                                <Text>
-                                    {`Contact email: ${confirming.contactEmail}`}
-                                </Text>
-                                {Input && (
-                                    <Button
-                                        key="change-email"
-                                        plain
-                                        label="Change email"
-                                        onPress={() =>
-                                            update($, confirmation, (current) =>
-                                                current && {
-                                                    ...current,
-                                                    isEditingEmail: true,
-                                                },
-                                            )
-                                        }
-                                    />
-                                )}
-                            </Box>
-                        )}
+                        {/* why: no Change email: a text field in the pane gets no keys while Claude's question dialog is open */}
+                        <Text>{`Contact email: ${confirming.contactEmail}`}</Text>
                         <Box gap={1}>
                             <Button
                                 key="confirm-submit"
