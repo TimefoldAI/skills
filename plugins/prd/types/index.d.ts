@@ -12,6 +12,8 @@ export type InterviewProgress = {
     currentSectionId: string | null;
     fullCoverage: number;
     sections: InterviewSection[];
+    contactEmail?: string;
+    hasCurrentPrd?: boolean;
 };
 
 declare module "claude-code" {
@@ -19,6 +21,7 @@ declare module "claude-code" {
         "prd": {
             progress: InterviewProgress | null;
             expandedIds: string[];
+            server: string | null;
         };
     }
 }
