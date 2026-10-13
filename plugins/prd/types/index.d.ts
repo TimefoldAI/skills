@@ -19,7 +19,6 @@ export type InterviewProgress = {
 export type SubmitConfirmation = {
     interviewId: string;
     contactEmail: string;
-    isEditingEmail: boolean;
 };
 
 declare module "claude-code" {

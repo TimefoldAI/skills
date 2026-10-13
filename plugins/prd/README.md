@@ -18,9 +18,9 @@ The plugin has two parts:
   `plan-van-routes-PRD-3F9A2C.md`. **Submit for build** shows the same confirmation in the pane as the
   PRD Chat website: "We send your requirements document, as Markdown and PDF, to our solutions
   team", with your sign-in email as the contact email. The confirmation does not wait for the question
-  Claude asks now. Select **Change email** and type another email in the field. When you select
-  **Submit**, the pane sends the PRD to Timefold. If Claude has not saved the PRD
-  since your last answer, Claude writes it first, and the pane then sends it. In Claude chat and Cowork,
+  Claude asks now. When you select **Submit**, the pane sends the PRD to Timefold. If Claude has not
+  saved the PRD since your last answer, Claude writes it first, and the pane then sends it. To use
+  another contact email, ask Claude to submit for build with that email. In Claude chat and Cowork,
   ask Claude to submit for build: Claude asks you the same question first.
 
 The pane shows in the Claude Code terminal and in the Code tab of the Claude desktop app. In
