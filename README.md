@@ -9,14 +9,14 @@ these skills work in Claude Code, Cursor, Codex, GitHub Copilot, and many other 
 
 ## Skills in this repository
 
-| Skill | Purpose |
-|---|---|
-| [`explain-dataset-ess`](./skills/explain-dataset-ess) | Explain an optimized dataset of the Employee Shift Scheduling model |
-| [`explain-dataset-fsr`](./skills/explain-dataset-fsr) | Explain an optimized dataset of the Field Service Routing model |
-| [`explain-dataset-pdr`](./skills/explain-dataset-pdr) | Explain an optimized dataset of the Pick-up and Delivery Routing model |
+| Skill                                                       | Purpose                                                                                                        |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [`explain-dataset-ess`](./skills/explain-dataset-ess)       | Explain an optimized dataset of the Employee Shift Scheduling model                                            |
+| [`explain-dataset-fsr`](./skills/explain-dataset-fsr)       | Explain an optimized dataset of the Field Service Routing model                                                |
+| [`explain-dataset-pdr`](./skills/explain-dataset-pdr)       | Explain an optimized dataset of the Pick-up and Delivery Routing model                                         |
 | [`explain-dataset-shared`](./skills/explain-dataset-shared) | The model-agnostic workflow and the Python scripts. The three skills above read it. Do not invoke it directly. |
-| [`language-guidelines`](./skills/language-guidelines) | Timefold's language rules and terminology. The report prose follows them. |
-| [`timefold-write-report`](./skills/timefold-write-report) | How a report is assembled, which metadata it carries, and where it is saved. |
+| [`language-guidelines`](./skills/language-guidelines)       | Timefold's language rules and terminology. The report prose follows them.                                      |
+| [`timefold-write-report`](./skills/timefold-write-report)   | How a report is assembled, which metadata it carries, and where it is saved.                                   |
 
 The `explain-dataset` skills answer questions about a dataset that Timefold has optimized:
 
@@ -29,6 +29,13 @@ The `explain-dataset` skills answer questions about a dataset that Timefold has 
 The skills reach your dataset through the Timefold API. They only read it. The recommendation
 call sends a request body, but it asks the model what an assignment would cost. It does not
 change your dataset.
+
+## Plugins in this repository
+
+| Plugin                 | Purpose                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `timefold-skills`      | The skills above, as one Claude Code plugin                                                                                    |
+| [`prd`](./plugins/prd) | Define the requirements of an optimization model with the Timefold PRD Chat connector, with a requirements pane in Claude Code |
 
 ## Installation
 
@@ -70,12 +77,12 @@ install for all your projects.
 
 The skill finds a runtime by itself, in this order:
 
-| Level | Condition | What runs |
-|---|---|---|
-| 1 | [uv](https://docs.astral.sh/uv/getting-started/installation/) is installed | `uv run <script>`, and uv supplies a Python if the machine has none |
-| 2 | Python 3.9 or later is installed | `python3 <script>` (or `python` on Windows) |
-| 3 | A shell, but no Python | `curl` calls the API directly |
-| 4 | No shell (Claude Desktop, Web UI) | The agent calls the API with WebFetch |
+| Level | Condition                                                                  | What runs                                                           |
+| ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 1     | [uv](https://docs.astral.sh/uv/getting-started/installation/) is installed | `uv run <script>`, and uv supplies a Python if the machine has none |
+| 2     | Python 3.9 or later is installed                                           | `python3 <script>` (or `python` on Windows)                         |
+| 3     | A shell, but no Python                                                     | `curl` calls the API directly                                       |
+| 4     | No shell (Claude Desktop, Web UI)                                          | The agent calls the API with WebFetch                               |
 
 Levels 1 and 2 are the fast path: the scripts handle pagination, they format the results, and
 they keep large payloads out of the agent's context. Levels 3 and 4 still work, but on a large
@@ -94,10 +101,10 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 The scripts read these environment variables. The dataset ID, the model, and the model API URL
 stay on the command line.
 
-| Variable | Purpose |
-|---|---|
+| Variable           | Purpose                                                                  |
+| ------------------ | ------------------------------------------------------------------------ |
 | `TIMEFOLD_API_KEY` | Your API key. Required, and the environment is the only way to supply it |
-| `TIMEFOLD_TENANT` | Your tenant ID. Optional, `--tenant` also works |
+| `TIMEFOLD_TENANT`  | Your tenant ID. Optional, `--tenant` also works                          |
 
 Export your API key in the shell you start your agent from:
 
