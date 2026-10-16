@@ -671,3 +671,192 @@ test("a refused download prompt says why in a toast", async ($, on) => {
         "PRD Chat: the message was not sent: prompts from plugins are off",
     ]);
 });
+
+const BUILD_SERVER = "mcp__prd-chat__";
+
+// why: the order differs from the build's on purpose: the pane orders the phases by the guide each one returns
+const BUILD_TOOLS = [
+    ["start_model_build", "Starts building a Timefold model from a PRD and returns the build process and the planning guide, with a link to the model archetype. Use it once per model."],
+    ["complete_constraints_phase", "Ends a build's CONSTRAINTS phase with every constraint's implementation, the full test run and the independent review, and returns the GOLDEN_FILE_TEST guide."],
+    ["complete_planning", "Ends a build's planning phase: locks the constraint list and returns the DTOS_AND_DOMAIN guide."],
+    ["complete_ui_build_phase", "Ends a build's UI_BUILD phase with the browser check of the running model, and returns the final steps."],
+    ["complete_domain_phase", "Ends a build's DTOS_AND_DOMAIN phase with the build result and returns the CONSTRAINTS guide."],
+    ["get_model_build", "Returns a model build's phase, its registered constraints and the guide for its current phase."],
+    ["complete_profiling_phase", "Ends a build's CONSTRAINT_PROFILING phase with the before and after findings, and returns the UI_BUILD guide."],
+    ["complete_golden_file_phase", "Ends a build's GOLDEN_FILE_TEST phase with the ConstraintAnalysis report and the live solve result, and returns the CONSTRAINT_PROFILING guide."],
+].map(([name, description]) => ({
+    name: `${BUILD_SERVER}${name}`,
+    description: description ?? "",
+    mcp: true,
+}));
+
+const OTHER_TOOLS = [
+    { name: "Read", description: "Reads a file.", mcp: false },
+    {
+        name: "mcp__other__complete_task",
+        description: "Ends a task.",
+        mcp: true,
+    },
+];
+
+const PHASE_LABELS = [
+    "Planning",
+    "Domain",
+    "Constraints",
+    "Golden file",
+    "Profiling",
+    "UI build",
+];
+
+const BUILD_ID = "0b6f4a8e-2c1d-4e3f-9a7b-5c6d7e8f9a0b";
+
+function answerBuildTools(on: On, tools = [...OTHER_TOOLS, ...BUILD_TOOLS]) {
+    on("tool.list", () => ({ value: tools }));
+}
+
+test("the build phases come from the connector's complete tools, in the order their guides chain", async ($, on) => {
+    answerTurnAndProgress(on);
+    answerBuildTools(on);
+
+    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
+    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
+
+    expect(await ui.find({ type: "Text", text: "Model build" })).toBeDefined();
+    const labels = (await ui.findAll({ type: "Text" }))
+        .map((text) => text.text)
+        .filter((text) => PHASE_LABELS.includes(text));
+
+    expect(labels).toEqual(PHASE_LABELS);
+    expect(
+        (await ui.findAll({ type: "Text", text: "Not started" })).length,
+    ).toBe(PHASE_LABELS.length);
+    expect(await ui.findAll({ type: "Text", text: "◀ now" })).toHaveLength(1);
+    expect((await ui.find({ key: "build-model" }))?.props.label).toBe(
+        "Build model",
+    );
+    expect(await ui.find({ key: "download-report" })).toBeDefined();
+    expect(await ui.find({ key: "submit-build" })).toBeDefined();
+});
+
+test("a connector without start_model_build shows no build phases and no Build model button", async ($, on) => {
+    answerTurnAndProgress(on);
+    answerBuildTools(on, OTHER_TOOLS);
+
+    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
+    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
+
+    expect(await ui.find({ type: "Text", text: "Model build" })).toBeUndefined();
+    expect(await ui.find({ key: "build-model" })).toBeUndefined();
+    expect(await ui.find({ key: "submit-build" })).toBeDefined();
+});
+
+test("Build model asks Claude to call start_model_build", async ($, on) => {
+    const submitted: string[] = [];
+
+    answerTurnAndProgress(on);
+    answerBuildTools(on);
+    on("ui.toast", () => ({ value: undefined }));
+    on("prompt.submit", ($, e) => {
+        submitted.push(e.text);
+
+        return { text: e.text };
+    });
+
+    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
+    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
+
+    await ui.press({ key: "build-model" });
+
+    expect(submitted).toEqual([
+        "Please build the Timefold model from this PRD now: call start_model_build with the full PRD and follow the guide it returns.",
+    ]);
+});
+
+type DrawnPane = {
+    findAll: (query: { type: string }) => Promise<{ text: string }[]>;
+};
+
+async function phaseStatuses(ui: DrawnPane) {
+    const texts = (await ui.findAll({ type: "Text" })).map(
+        (text) => text.text,
+    );
+    const statuses = PHASE_LABELS.map((label) => {
+        const index = texts.indexOf(label);
+
+        return texts[index + 1];
+    });
+    const active = PHASE_LABELS.filter(
+        (label) => texts[texts.indexOf(label) + 2] === "◀ now",
+    );
+
+    return { statuses, active };
+}
+
+test("the pane marks the phase the build is in as Claude moves through the build", async ($, on) => {
+    answerTurnAndProgress(on);
+    answerBuildTools(on);
+    on("tool.call", { tool: `${BUILD_SERVER}start_model_build` }, () => ({
+        result: [],
+        text: `TIMEFOLD MODEL BUILD\nPHASES\n1. PLANNING: scaffold\nbuildId: ${BUILD_ID}\nPHASE: PLANNING\n- Read the files.`,
+    }));
+    on("tool.call", { tool: `${BUILD_SERVER}complete_planning` }, () => ({
+        result: [],
+        text: `Phase complete. The build is now in DTOS_AND_DOMAIN.\nbuildId: ${BUILD_ID}\nPHASE: DTOS_AND_DOMAIN`,
+    }));
+    on("tool.call", { tool: `${BUILD_SERVER}complete_domain_phase` }, () => ({
+        result: [],
+        text: "Done.",
+    }));
+    on("tool.call", { tool: `${BUILD_SERVER}get_model_build` }, () => ({
+        result: [],
+        text: `buildId: ${BUILD_ID}\nmodel: Van Routes (van-routes)\nphase: UI_BUILD\nconstraints (locked):\n- H1 (hard): Capacity`,
+    }));
+    on("tool.call", { tool: `${BUILD_SERVER}complete_ui_build_phase` }, () => ({
+        isError: true,
+        result: [],
+        text: "The plan did not render.",
+    }));
+
+    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
+    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
+
+    await $.tool.call({ tool: `${BUILD_SERVER}start_model_build` });
+    expect(await phaseStatuses(ui)).toEqual({
+        statuses: ["In progress", ...Array(5).fill("Not started")],
+        active: ["Planning"],
+    });
+
+    await $.tool.call({ tool: `${BUILD_SERVER}complete_planning` });
+    expect((await phaseStatuses(ui)).active).toEqual(["Domain"]);
+
+    // why: a result that names no phase still moves the build on to the phase after the completed one
+    await $.tool.call({ tool: `${BUILD_SERVER}complete_domain_phase` });
+    expect(await phaseStatuses(ui)).toEqual({
+        statuses: ["Done", "Done", "In progress", ...Array(3).fill("Not started")],
+        active: ["Constraints"],
+    });
+
+    await $.tool.call({ tool: `${BUILD_SERVER}get_model_build` });
+    expect((await phaseStatuses(ui)).active).toEqual(["UI build"]);
+
+    await $.tool.call({ tool: `${BUILD_SERVER}complete_ui_build_phase` });
+    expect((await phaseStatuses(ui)).active).toEqual(["UI build"]);
+});
+
+test("the last phase's completion marks every phase done", async ($, on) => {
+    answerTurnAndProgress(on);
+    answerBuildTools(on);
+    on("tool.call", { tool: `${BUILD_SERVER}complete_ui_build_phase` }, () => ({
+        result: [],
+        text: `Phase complete. The build is now in DONE.\nbuildId: ${BUILD_ID}\nTHE BUILD IS DONE`,
+    }));
+
+    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
+    await $.tool.call({ tool: `${BUILD_SERVER}complete_ui_build_phase` });
+    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
+
+    expect(await phaseStatuses(ui)).toEqual({
+        statuses: Array(6).fill("Done"),
+        active: [],
+    });
+});

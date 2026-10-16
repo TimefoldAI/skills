@@ -1,9 +1,16 @@
 import { atom, read, update } from "claude-code";
-import type { EngineInterface, McpToolResult, Register } from "claude-code";
+import type {
+    EngineInterface,
+    McpToolResult,
+    Register,
+    ToolInfo,
+} from "claude-code";
 
 import type {
+    BuildPhase,
     InterviewProgress,
     InterviewSection,
+    ModelBuild,
     SubmitConfirmation,
 } from "../types";
 
@@ -12,6 +19,18 @@ const INTERVIEW_TOOL =
     /^mcp__(.+)__(start_requirements_interview|record_interview_turn)$/;
 const INTERVIEW_ID = /interviewId: (\S+)/;
 const SAVE_PRD_TOOL = /^mcp__(.+)__save_prd$/;
+const START_BUILD_TOOL = "start_model_build";
+const BUILD_TOOL =
+    /^mcp__(.+)__(start_model_build|get_model_build|amend_model_constraints|complete_\w+)$/;
+// why: each phase of a build ends with one complete_* tool, so these tools are the phases
+const PHASE_TOOL = /^complete_(\w+?)(?:_phase)?$/;
+const PHASE_ENDED = /\bends a build's (\w+) phase/i;
+const NEXT_GUIDE = /\breturns the (\w+) guide/i;
+const BUILD_PHASE = /\b(?:build is (?:now )?in|phase:) (\w+)/gi;
+const BUILD_DONE = "DONE";
+const ACRONYMS: Record<string, string> = { ui: "UI", dto: "DTO", dtos: "DTOs" };
+const BUILD_PROMPT =
+    "Please build the Timefold model from this PRD now: call start_model_build with the full PRD and follow the guide it returns.";
 const REFERENCE_LENGTH = 6;
 const MAX_SLUG_LENGTH = 60;
 const BAR_WIDTH = 20;
@@ -35,6 +54,11 @@ const confirmation = atom(
     { plugin: "prd", key: "confirmation" } as const,
     null,
 );
+const buildPhases = atom(
+    { plugin: "prd", key: "buildPhases" } as const,
+    null,
+);
+const modelBuild = atom({ plugin: "prd", key: "build" } as const, null);
 
 type Status = "open" | "inProgress" | "covered";
 
@@ -42,6 +66,14 @@ const STATUS = {
     open: { glyph: "○", label: "Open", color: "gray" },
     inProgress: { glyph: "◐", label: "In progress", color: "yellow" },
     covered: { glyph: "●", label: "Covered", color: "green" },
+} as const;
+
+type PhaseStatus = "waiting" | "active" | "done";
+
+const PHASE_STATUS = {
+    waiting: { glyph: "○", label: "Not started", color: "gray" },
+    active: { glyph: "◐", label: "In progress", color: "yellow" },
+    done: { glyph: "●", label: "Done", color: "green" },
 } as const;
 
 function statusOf(section: InterviewSection, fullCoverage: number): Status {
@@ -105,6 +137,84 @@ function prdFileName(interviewId: string, problemSummary: string | null) {
     const slug = problemSummary ? titleSlug(problemSummary) : "";
 
     return slug ? `${slug}-${reference}.md` : `${reference}.md`;
+}
+
+function phaseLabel(name: string) {
+    const words = name
+        .split("_")
+        .map((word) => ACRONYMS[word] ?? word);
+    const [first = "", ...rest] = words;
+
+    return [first.charAt(0).toUpperCase() + first.slice(1), ...rest].join(" ");
+}
+
+// why: the connector changes its phases over time, so read them from its complete_* tools
+function buildPhasesOf(tools: ToolInfo[], server: string): BuildPhase[] | null {
+    const prefix = `mcp__${server}__`;
+    const own = tools.filter((tool) => tool.name.startsWith(prefix));
+
+    if (!own.some((tool) => tool.name === prefix + START_BUILD_TOOL)) return null;
+    const ends = own.flatMap((tool) => {
+        const name = tool.name.slice(prefix.length);
+        const phaseName = PHASE_TOOL.exec(name)?.[1];
+
+        if (phaseName === undefined) return [];
+        const id = (
+            PHASE_ENDED.exec(tool.description)?.[1] ?? phaseName
+        ).toUpperCase();
+        const next = NEXT_GUIDE.exec(tool.description)?.[1]?.toUpperCase();
+
+        return [{ phase: { id, tool: name, label: phaseLabel(phaseName) }, next }];
+    });
+    const followers = new Set(ends.map((end) => end.next));
+    const ordered: BuildPhase[] = [];
+    // why: each description names the next phase's guide, so walk that chain from the phase no other one leads to
+    let current = ends.find((end) => !followers.has(end.phase.id));
+
+    while (current && !ordered.includes(current.phase)) {
+        ordered.push(current.phase);
+        const next = current.next;
+
+        current = ends.find((end) => end.phase.id === next);
+    }
+
+    return [
+        ...ordered,
+        ...ends.map((end) => end.phase).filter((phase) => !ordered.includes(phase)),
+    ];
+}
+
+function phaseIdIn(text: string, phases: BuildPhase[]) {
+    return [...text.matchAll(BUILD_PHASE)]
+        .map((match) => (match[1] ?? "").toUpperCase())
+        .find(
+            (id) =>
+                id === BUILD_DONE || phases.some((phase) => phase.id === id),
+        );
+}
+
+// why: a phase the result does not name is still known: start begins the first one, and complete_* moves on to the next
+function phaseAfter(tool: string, phases: BuildPhase[]) {
+    if (tool === START_BUILD_TOOL) return phases[0]?.id;
+    const index = phases.findIndex((phase) => phase.tool === tool);
+
+    if (index < 0) return undefined;
+
+    return phases[index + 1]?.id ?? BUILD_DONE;
+}
+
+function phaseStatusOf(
+    index: number,
+    build: ModelBuild | null,
+    phases: BuildPhase[],
+): PhaseStatus {
+    if (build === null) return "waiting";
+    if (build.phaseId === BUILD_DONE) return "done";
+    const activeIndex = phases.findIndex((phase) => phase.id === build.phaseId);
+
+    if (activeIndex < 0 || index > activeIndex) return "waiting";
+
+    return index === activeIndex ? "active" : "done";
 }
 
 function isInterviewProgress(value: unknown): value is InterviewProgress {
@@ -251,6 +361,36 @@ async function confirmSubmit($: EngineInterface, confirmed: SubmitConfirmation) 
     sendAsUser($, "Please write the PRD now.");
 }
 
+async function refreshBuildPhases($: EngineInterface, server: string) {
+    const tools = await $.tool.list().catch(() => null);
+
+    if (tools === null) return null;
+    const phases = buildPhasesOf(tools, server);
+
+    await update($, buildPhases, () => phases);
+
+    return phases;
+}
+
+async function followBuild(
+    $: EngineInterface,
+    server: string,
+    tool: string,
+    text: string,
+) {
+    const phases = (await refreshBuildPhases($, server)) ?? [];
+    const phaseId = phaseIdIn(text, phases) ?? phaseAfter(tool, phases);
+
+    if (phaseId === undefined) return;
+    await update($, modelBuild, () => ({ phaseId }));
+    await $.ui.open(PANE);
+}
+
+function requestBuild($: EngineInterface) {
+    $.ui.toast("PRD Chat: Claude starts the model build.");
+    sendAsUser($, BUILD_PROMPT);
+}
+
 async function refreshProgress(
     $: EngineInterface,
     server: string,
@@ -277,6 +417,7 @@ async function refreshProgress(
 
     await update($, progress, () => loaded);
     await update($, interviewServer, () => server);
+    await refreshBuildPhases($, server);
     await $.ui.open(PANE);
 }
 
@@ -384,18 +525,58 @@ export const register: Register = (on) => {
         return ran;
     });
 
+    on("tool.call", { tool: BUILD_TOOL }, async ($, e, next) => {
+        const ran = await next(e);
+        const match = BUILD_TOOL.exec(e.tool);
+        const server = match?.[1];
+        const tool = match?.[2];
+
+        if (ran.deny === undefined && !ran.isError && server && tool)
+            await followBuild($, server, tool, ran.text ?? "");
+
+        return ran;
+    });
+
     on("ui.render", { component: "Pane", requestId: PANE.id }, async ($, e) => {
         const { Box, Text, Button } = $.ui.resolve(e);
         const interview = await read($, progress);
         const expanded = await read($, expandedIds);
         const confirming = await read($, confirmation);
+        const phases = await read($, buildPhases);
+        const build = await read($, modelBuild);
+        const buildSection = phases !== null && phases.length > 0 && (
+            <Box key="build-phases" flexDirection="column">
+                <Text bold>Model build</Text>
+                {phases.map((phase, index) => {
+                    const statusKey = phaseStatusOf(index, build, phases);
+                    const status = PHASE_STATUS[statusKey];
+
+                    return (
+                        <Box key={`phase-${phase.id}`} gap={1}>
+                            <Text color={status.color}>{status.glyph}</Text>
+                            <Text>{phase.label}</Text>
+                            <Text color={status.color} dimColor>
+                                {status.label}
+                            </Text>
+                            {statusKey === "active" && (
+                                <Text color="cyan" bold>
+                                    ◀ now
+                                </Text>
+                            )}
+                        </Box>
+                    );
+                })}
+            </Box>
+        );
 
         if (interview === null)
-            return (
+            return build === null ? (
                 <Text dimColor>
                     No interview yet. Ask Claude to start a Timefold
                     requirements interview.
                 </Text>
+            ) : (
+                <Box flexDirection="column">{buildSection}</Box>
             );
         const percent = coveragePercent(interview);
         const toggle = (id: string) =>
@@ -480,6 +661,7 @@ export const register: Register = (on) => {
                         );
                     })}
                 </Box>
+                {buildSection}
                 {confirming?.interviewId === interview.interviewId ? (
                     <Box
                         key="submit-confirmation"
@@ -523,6 +705,13 @@ export const register: Register = (on) => {
                             label="Submit for build"
                             onPress={() => openConfirmation($, interview)}
                         />
+                        {phases !== null && (
+                            <Button
+                                key="build-model"
+                                label="Build model"
+                                onPress={() => requestBuild($)}
+                            />
+                        )}
                     </Box>
                 )}
             </Box>
