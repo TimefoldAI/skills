@@ -21,6 +21,16 @@ export type SubmitConfirmation = {
     contactEmail: string;
 };
 
+export type BuildPhase = {
+    id: string;
+    tool: string;
+    label: string;
+};
+
+export type ModelBuild = {
+    phaseId: string;
+};
+
 declare module "claude-code" {
     interface PluginState {
         "prd": {
@@ -28,6 +38,8 @@ declare module "claude-code" {
             expandedIds: string[];
             server: string | null;
             confirmation: SubmitConfirmation | null;
+            buildPhases: BuildPhase[] | null;
+            build: ModelBuild | null;
         };
     }
 }

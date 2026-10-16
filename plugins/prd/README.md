@@ -23,6 +23,18 @@ The plugin has two parts:
   another contact email, ask Claude to submit for build with that email. In Claude chat and Cowork,
   ask Claude to submit for build: Claude asks you the same question first.
 
+If your Timefold account can build models, the connector also has the model build tools, and the
+pane shows two more items:
+
+- **Build model** asks Claude to start a model build from the PRD with `start_model_build`. Claude
+  then follows the guide that the connector gives for each phase.
+- **Model build**, below the topics, shows the phases of the build. Each phase shows its status
+  (not started, in progress or done), and the phase that the build is in now is marked. The pane
+  gets the phases from the connector's tools: each phase ends with one `complete_*` tool, and that
+  tool's description gives the next phase. Thus, the pane shows a new or changed phase without an
+  update of the plugin. The pane follows the phase from the results of the build tools that Claude
+  calls.
+
 The pane shows in the Claude Code terminal and in the Code tab of the Claude desktop app. In
 Claude on the web and in the desktop chat, the connector works without the pane.
 
