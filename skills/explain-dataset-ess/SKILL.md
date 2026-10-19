@@ -48,6 +48,13 @@ leaves the placeholder unresolved, replace it with the absolute directory that h
 `$PY` is the Python runner that the shared skill's runtime check selects (`uv run`,
 `python3`, or `python`). Run that check before the first script call.
 
+The variables in the block below are placeholders. **Write their values out in every command you
+run**, with the runner and the absolute script path in full, for example
+`uv run /abs/path/to/explain-dataset-shared/scripts/summarize.py --model-api-url https://... --model ...`.
+Each command starts a new shell, so a variable that an earlier command set is gone. And in zsh,
+the default shell on macOS, `$PY` with the value `uv run` stays one word, so the command is not
+found.
+
 ```bash
 SKILL_DIR=${CLAUDE_SKILL_DIR}
 SHARED=$SKILL_DIR/../explain-dataset-shared

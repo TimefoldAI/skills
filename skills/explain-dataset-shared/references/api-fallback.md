@@ -12,6 +12,11 @@ Use this when you cannot run the Python scripts. Two cases reach this file:
     "$MODEL_API_URL$COLLECTION/DATASET_ID?tfSource=timefold-skills.$SKILL.curl"
   ```
 
+  `$SHARED`, `$MODEL_API_URL`, `$COLLECTION`, and `$SKILL` are placeholders. Write their values out
+  in each command: a variable from an earlier command is gone, because each command starts a new
+  shell. `$TIMEFOLD_API_KEY` is the exception. It comes from the user's environment, so leave it
+  as a variable, and never write the key out.
+
   Add `| head -c 4000` to keep a large payload out of your context, or write the response to a
   file and read the parts you need:
 
