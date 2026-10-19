@@ -34,8 +34,8 @@ guidelines automatically." Then proceed with plain, clear writing on your own ju
 The scripts need nothing more than Python 3.9 or later. They use the standard library only, so
 there is no package to install and no virtual environment to create.
 
-**Run this check once, before Step 1.** It sets `$PY`. Use `$PY` for every script command in
-this skill:
+**Run this check once, before Step 1.** It prints the runner to use for every script command in
+this skill. This skill calls it `$PY`:
 
 ```bash
 PY=""
@@ -52,6 +52,18 @@ echo "runner: ${PY:-none}"
 The loop runs the candidate, and it does not only look for the name. This matters on Windows,
 where `python` can be a Microsoft Store stub that is on the PATH but does not work.
 
+**Write the runner out in every command.** Do not rely on `$PY`, `$SCRIPTS`, or any other variable
+from an earlier command. Each command starts a new shell, so the variable is gone. And in zsh, the
+default shell on macOS, `$PY` with the value `uv run` stays one word, so the command is not found.
+Write, for example:
+
+```bash
+uv run /abs/path/to/explain-dataset-shared/scripts/summarize.py --model-api-url https://... --model ...
+```
+
+In the rest of this skill, `$PY`, `$SCRIPTS`, `$SHARED`, `$PLUGIN_ROOT`, `$MODEL_API_URL`, and
+`$MODEL` are placeholders for those values.
+
 If a runner is found, use the scripts. They are faster, they handle pagination and formatting,
 and they are the correct choice for any dataset with more than ~50 resources or ~200 work items.
 
@@ -60,8 +72,8 @@ next level of this ladder:
 
 | Level | Condition | What to do |
 |---|---|---|
-| 1 | `uv` is on the PATH | `PY="uv run"`, and uv downloads a Python if necessary |
-| 2 | Python 3.9+ is on the PATH | `PY=python3` or `PY=python` |
+| 1 | `uv` is on the PATH | The runner is `uv run`, and uv downloads a Python if necessary |
+| 2 | Python 3.9+ is on the PATH | The runner is `python3` or `python` |
 | 3 | Bash works, but no Python | Call the API with `curl`; see `references/api-fallback.md` |
 | 4 | No shell at all | Call the API with WebFetch; see `references/api-fallback.md` |
 
@@ -89,7 +101,8 @@ system, and continue at level 3 if they decline or do not answer:
 > Otherwise I'll carry on calling the API directly, which works fine."
 
 The installer puts `uv` in `~/.local/bin`, which the current shell may not have on its PATH. After
-an install, set `PY="$HOME/.local/bin/uv run"` for this session rather than starting a new shell.
+an install, use `$HOME/.local/bin/uv run` as the runner for this session rather than starting a new
+shell.
 
 **Recommend Claude Code for large datasets.** If the user is on Desktop or Web and the dataset
 has hundreds of resources or thousands of work items, tell them upfront:
@@ -113,7 +126,6 @@ first tells you the absolute path as `$SCRIPTS`.
 | `score_justifications.py` | **Deep dive into justifications.** `--samples N` for a broad overview; `--resource NAME` to see every constraint violation involving a specific vehicle / employee / driver |
 
 ```bash
-SCRIPTS=scripts     # $PY comes from the runtime check above
 $PY $SCRIPTS/summarize.py             --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--tenant ID]
 $PY $SCRIPTS/list_unassigned.py       --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--recommendations]
 $PY $SCRIPTS/resource_metrics.py      --model-api-url $MODEL_API_URL --model $MODEL --dataset-id ID [--sort overtime]
