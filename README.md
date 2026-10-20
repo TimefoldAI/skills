@@ -134,7 +134,8 @@ The agent selects the skill for your model, collects the data, and writes a repo
   plugin.json          # plugin manifest for Claude Code
   marketplace.json     # makes this repository a Claude Code marketplace
 .github/workflows/
-  bump-plugin-version.yml   # bumps the minor version when the skills change
+  bump-plugin-version.yml       # bumps the minor version when the skills change
+  bump-prd-plugin-version.yml   # bumps the minor version when the prd plugin changes
 skills/
   explain-dataset-ess/
   explain-dataset-fsr/
@@ -158,6 +159,10 @@ The workflow writes the version into two files: `.claude-plugin/plugin.json`, wh
 reads, and `skills/explain-dataset-shared/VERSION`, which the skills read for the report
 metadata. Both are needed, because `npx skills add` copies the skill folders without the plugin
 manifest. Keep them in sync.
+
+The `prd` plugin has its own version in `plugins/prd/.claude-plugin/plugin.json`. A second
+workflow, `bump-prd-plugin-version.yml`, bumps its minor version each time `plugins/prd/` changes
+on `main`.
 
 ## Documentation
 
