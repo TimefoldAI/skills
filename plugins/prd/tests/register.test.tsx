@@ -338,7 +338,7 @@ function answerTurnAndProgress(on: On) {
     on("ui.open", () => ({ value: { isPlaced: true } }));
 }
 
-test("Download report asks Claude for the PRD and writes the saved document to a file named like PRD Chat's", async ($, on) => {
+test("Download report asks Claude for the PRD and writes the saved document to a file named like PRD Assistant's", async ($, on) => {
     const submitted: string[] = [];
     const written: { path: string; text: string }[] = [];
 
@@ -454,7 +454,7 @@ function answerSubmit(on: On, progress: InterviewProgress) {
     };
 }
 
-test("Submit for build confirms in the pane like PRD Chat's dialog, then hands the current PRD over with the sign-in email", async ($, on) => {
+test("Submit for build confirms in the pane like PRD Assistant's dialog, then hands the current PRD over with the sign-in email", async ($, on) => {
     const dialog = answerSubmit(on, SUBMITTABLE);
 
     await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
@@ -486,7 +486,7 @@ test("Submit for build confirms in the pane like PRD Chat's dialog, then hands t
         },
     ]);
     expect(dialog.toasts).toContain(
-        "PRD Chat: submitted. Our solutions team will contact you at alice@example.com.",
+        "PRD Assistant: submitted. Our solutions team will contact you at alice@example.com.",
     );
     expect(dialog.submitted).toEqual([]);
     expect(await ui.find({ key: "submit-build" })).toBeDefined();
@@ -632,7 +632,7 @@ test("a refused submit says why in a toast", async ($, on) => {
     await ui.press({ key: "confirm-submit" });
 
     expect(toasts).toContain(
-        "PRD Chat: not submitted: We couldn't send your requirements. Try again in a moment.",
+        "PRD Assistant: not submitted: We couldn't send your requirements. Try again in a moment.",
     );
 });
 
@@ -646,7 +646,7 @@ test("an older connector without the sign-in email is told apart", async ($, on)
 
     expect(await ui.find({ key: "submit-confirmation" })).toBeUndefined();
     expect(dialog.toasts).toContain(
-        "PRD Chat: this connector cannot submit for build yet.",
+        "PRD Assistant: this connector cannot submit for build yet.",
     );
 });
 
@@ -667,8 +667,8 @@ test("a refused download prompt says why in a toast", async ($, on) => {
     await ui.press({ key: "download-report" });
 
     expect(toasts).toEqual([
-        "PRD Chat: preparing the report.",
-        "PRD Chat: the message was not sent: prompts from plugins are off",
+        "PRD Assistant: preparing the report.",
+        "PRD Assistant: the message was not sent: prompts from plugins are off",
     ]);
 });
 

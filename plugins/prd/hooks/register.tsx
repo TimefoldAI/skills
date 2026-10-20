@@ -82,7 +82,7 @@ function statusOf(section: InterviewSection, fullCoverage: number): Status {
     return section.coverage > 0 ? "inProgress" : "open";
 }
 
-// why: the same square-rooted percentage as PRD Chat's coverage bar, so the first answers move it fast
+// why: the same square-rooted percentage as PRD Assistant's coverage bar, so the first answers move it fast
 function coveragePercent(interview: InterviewProgress): number {
     const covered = interview.sections.reduce(
         (sum, section) =>
@@ -131,7 +131,7 @@ function titleSlug(title: string) {
     return slug;
 }
 
-// why: PRD Chat names its download the same way: the title as a slug, then the reference
+// why: PRD Assistant names its download the same way: the title as a slug, then the reference
 function prdFileName(interviewId: string, problemSummary: string | null) {
     const reference = referenceOf(interviewId).slice(1);
     const slug = problemSummary ? titleSlug(problemSummary) : "";
@@ -268,10 +268,10 @@ function sendAsUser($: EngineInterface, text: string) {
         .submit({ text, asUser: true })
         .then((entered) => {
             if (entered.drop !== undefined)
-                $.ui.toast(`PRD Chat: the message was not sent: ${entered.drop}`);
+                $.ui.toast(`PRD Assistant: the message was not sent: ${entered.drop}`);
         })
         .catch((error: unknown) =>
-            $.ui.toast(`PRD Chat: the message was not sent: ${String(error)}`),
+            $.ui.toast(`PRD Assistant: the message was not sent: ${String(error)}`),
         );
 }
 
@@ -287,9 +287,9 @@ async function downloadReport(
 
     await $.fs
         .write(fileName, markdown)
-        .then(() => $.ui.toast(`PRD Chat: the report is saved as ${fileName}.`))
+        .then(() => $.ui.toast(`PRD Assistant: the report is saved as ${fileName}.`))
         .catch((error: unknown) =>
-            $.ui.toast(`PRD Chat: the report was not saved: ${String(error)}`),
+            $.ui.toast(`PRD Assistant: the report was not saved: ${String(error)}`),
         );
 }
 
@@ -308,11 +308,11 @@ async function submitForBuild(
     const server = await read($, interviewServer);
 
     if (server === null) {
-        $.ui.toast("PRD Chat: the interview's connector is not known yet.");
+        $.ui.toast("PRD Assistant: the interview's connector is not known yet.");
 
         return;
     }
-    $.ui.toast("PRD Chat: sending your requirements to Timefold.");
+    $.ui.toast("PRD Assistant: sending your requirements to Timefold.");
     const result = await $.mcp
         .call(server, "submit_for_build", { interviewId, contactEmail })
         .catch((error: unknown) => ({
@@ -322,8 +322,8 @@ async function submitForBuild(
 
     $.ui.toast(
         result.isError
-            ? `PRD Chat: not submitted: ${resultText(result)}`
-            : `PRD Chat: submitted. Our solutions team will contact you at ${contactEmail}.`,
+            ? `PRD Assistant: not submitted: ${resultText(result)}`
+            : `PRD Assistant: submitted. Our solutions team will contact you at ${contactEmail}.`,
     );
 }
 
@@ -333,7 +333,7 @@ async function openConfirmation(
     interview: InterviewProgress,
 ) {
     if (interview.contactEmail === undefined) {
-        $.ui.toast("PRD Chat: this connector cannot submit for build yet.");
+        $.ui.toast("PRD Assistant: this connector cannot submit for build yet.");
 
         return;
     }
@@ -345,7 +345,7 @@ async function openConfirmation(
     }));
 }
 
-// why: Submit in PRD Chat's confirmation is the user's consent to the handoff
+// why: Submit in PRD Assistant's confirmation is the user's consent to the handoff
 async function confirmSubmit($: EngineInterface, confirmed: SubmitConfirmation) {
     const interview = await read($, progress);
 
@@ -357,7 +357,7 @@ async function confirmSubmit($: EngineInterface, confirmed: SubmitConfirmation) 
         return;
     }
     pendingSubmitEmail = confirmed.contactEmail;
-    $.ui.toast("PRD Chat: Claude writes the requirements document first.");
+    $.ui.toast("PRD Assistant: Claude writes the requirements document first.");
     sendAsUser($, "Please write the PRD now.");
 }
 
@@ -387,7 +387,7 @@ async function followBuild(
 }
 
 function requestBuild($: EngineInterface) {
-    $.ui.toast("PRD Chat: Claude starts the model build.");
+    $.ui.toast("PRD Assistant: Claude starts the model build.");
     sendAsUser($, BUILD_PROMPT);
 }
 
@@ -400,7 +400,7 @@ async function refreshProgress(
         .call(server, "get_interview_progress", { interviewId })
         .catch((error: unknown) => {
             $.ui.toast(
-                `PRD Chat: the requirements pane was not updated: ${String(error)}`,
+                `PRD Assistant: the requirements pane was not updated: ${String(error)}`,
             );
 
             return null;
@@ -410,7 +410,7 @@ async function refreshProgress(
     const loaded = result.isError ? undefined : progressOf(result);
 
     if (!isInterviewProgress(loaded)) {
-        $.ui.toast("PRD Chat: the interview progress could not be loaded.");
+        $.ui.toast("PRD Assistant: the interview progress could not be loaded.");
 
         return;
     }
@@ -429,7 +429,7 @@ export const register: Register = (on) => {
             next.origin.plugin === $.plugin.name
                 ? {
                       decision: "allow",
-                      reason: "The PRD Chat pane reads the interview's progress.",
+                      reason: "The PRD Assistant pane reads the interview's progress.",
                   }
                 : next(e),
     );
@@ -440,7 +440,7 @@ export const register: Register = (on) => {
             next.origin.plugin === $.plugin.name
                 ? {
                       decision: "allow",
-                      reason: "The user confirmed Submit for build and the contact email in the PRD Chat pane.",
+                      reason: "The user confirmed Submit for build and the contact email in the PRD Assistant pane.",
                   }
                 : next(e),
     );
@@ -448,7 +448,7 @@ export const register: Register = (on) => {
         await $.command.register({
             name: "prd-panel",
             description:
-                "Show the requirements of the current PRD Chat interview",
+                "Show the requirements of the current PRD Assistant interview",
         });
 
         return next(e);
@@ -589,7 +589,7 @@ export const register: Register = (on) => {
             sendAsUser($, `Let's talk about ${section.label}: ${section.question}`);
         const requestDownload = () => {
             isDownloadRequested = true;
-            $.ui.toast("PRD Chat: preparing the report.");
+            $.ui.toast("PRD Assistant: preparing the report.");
             sendAsUser($, "Please write the PRD now.");
         };
 

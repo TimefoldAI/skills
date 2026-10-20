@@ -35,7 +35,7 @@ change your dataset.
 | Plugin                 | Purpose                                                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `timefold-skills`      | The skills above, as one Claude Code plugin                                                                                    |
-| [`prd`](./plugins/prd) | Define the requirements of an optimization model with the Timefold PRD Chat connector, with a requirements pane in Claude Code |
+| [`prd`](./plugins/prd) | Define the requirements of an optimization model with the Timefold PRD Assistant connector, with a requirements pane in Claude Code |
 
 ## Installation
 
