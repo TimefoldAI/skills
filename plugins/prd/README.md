@@ -6,22 +6,22 @@ own business and writes a requirements document (PRD) for Timefold.
 
 The plugin has two parts:
 
-- **The Timefold PRD Assistant connector** (`.mcp.json`): the MCP server that stores the interview and
-  the PRD at Timefold. You sign in with your Timefold account the first time Claude uses it.
+- **The Timefold PRD Assistant connector** (`.mcp.json`): the MCP server that stores the interview
+  and the PRD at Timefold. You sign in with your Timefold account the first time Claude uses it.
 - **A requirements pane for Claude Code** (`hooks/`): a mod that shows the interview's checklist
-  beside the conversation, as the PRD Assistant website does. The pane shows the requirements coverage
-  as a percentage and the interview's reference, such as `#PRD-3F9A2C`. Each topic shows its
-  status (open, in progress or covered), and the topic Claude asks about now is marked. Unfold a
+  beside the conversation, as the PRD Assistant website does. The pane shows the requirements
+  coverage as a percentage and the interview's reference, such as `#PRD-3F9A2C`. Each topic shows
+  its status (open, in progress or covered), and the topic Claude asks about now is marked. Unfold a
   topic to see what Claude captured. On a topic that is not covered, press **Talk about this** to
   make Claude ask about that topic next. **Download report** asks Claude to write the PRD and saves
   it in the session folder, with the same file name as the website gives it, such as
-  `plan-van-routes-PRD-3F9A2C.md`. **Submit for build** shows the same confirmation in the pane as the
-  PRD Assistant website: "We send your requirements document, as Markdown and PDF, to our solutions
-  team", with your sign-in email as the contact email. The confirmation does not wait for the question
-  Claude asks now. When you select **Submit**, the pane sends the PRD to Timefold. If Claude has not
-  saved the PRD since your last answer, Claude writes it first, and the pane then sends it. To use
-  another contact email, ask Claude to submit for build with that email. In Claude chat and Cowork,
-  ask Claude to submit for build: Claude asks you the same question first.
+  `plan-van-routes-PRD-3F9A2C.md`. **Submit for build** shows the same confirmation in the pane as
+  the PRD Assistant website: "We send your requirements document, as Markdown and PDF, to our
+  solutions team", with your sign-in email as the contact email. The confirmation does not wait for
+  the question Claude asks now. When you select **Submit**, the pane sends the PRD to Timefold. If
+  Claude has not saved the PRD since your last answer, Claude writes it first, and the pane then
+  sends it. To use another contact email, ask Claude to submit for build with that email. In Claude
+  chat and Cowork, ask Claude to submit for build: Claude asks you the same question first.
 
 If your Timefold account can build models, the connector also has the model build tools, and the
 pane shows two more items:
