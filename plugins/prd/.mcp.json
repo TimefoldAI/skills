@@ -2,7 +2,7 @@
     "mcpServers": {
         "prd-chat": {
             "type": "http",
-            "url": "https://prd-chat-sandbox.timefold.dev/mcp"
+            "url": "https://prd.timefold.ai/mcp"
         }
     }
 }
