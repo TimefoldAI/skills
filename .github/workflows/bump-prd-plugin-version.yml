@@ -1,0 +1,63 @@
+# Bumps the minor version of the prd plugin when its content changes on main.
+# Claude uses the plugin version to find out that a plugin changed and must be
+# reloaded. Without a version bump, installed plugins do not update.
+#
+# bump-plugin-version.yml does the same for the timefold-skills plugin.
+
+name: Bump prd plugin version
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'plugins/prd/**'
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump the minor version
+        run: |
+          set -euo pipefail
+
+          manifest=plugins/prd/.claude-plugin/plugin.json
+
+          # The bump commit itself only touches the manifest. Never bump on that,
+          # or every bump triggers the next one.
+          changed=$(git diff --name-only HEAD~1 HEAD -- plugins/prd)
+          content=$(grep -vxF "$manifest" <<< "$changed" || true)
+
+          if [ -n "$content" ]; then
+            echo "Plugin content changed."
+          else
+            echo "Only the manifest changed. Nothing to bump."
+            exit 0
+          fi
+
+          current=$(jq -r '.version' "$manifest")
+          major=$(echo "$current" | cut -d. -f1)
+          minor=$(echo "$current" | cut -d. -f2)
+          new_version="${major}.$((minor + 1)).0"
+          plugin_name=$(jq -r '.name' "$manifest")
+
+          jq --indent 4 --arg v "$new_version" '.version = $v' "$manifest" > tmp.json
+          mv tmp.json "$manifest"
+
+          echo "Bumped $plugin_name: $current -> $new_version"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$manifest"
+          git commit -m "chore: bump plugin version: ${plugin_name}:${new_version} [skip ci]"
+
+          # why: the timefold-skills bump can push to main first when one merge changes both plugins
+          git pull --rebase origin main
+          git push
