@@ -590,6 +590,35 @@ test("without a current PRD, Submit asks Claude for the PRD and submits once it 
     ]);
 });
 
+test("a saved PRD of another interview does not use the confirmation", async ($, on) => {
+    const dialog = answerSubmit(on, { ...SUBMITTABLE, hasCurrentPrd: false });
+
+    on("tool.call", { tool: SAVE_TOOL }, () => ({
+        result: [],
+        text: "Saved PRD version 1.",
+    }));
+    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
+    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
+
+    await ui.press({ key: "submit-build" });
+    await ui.press({ key: "confirm-submit" });
+    await $.tool.call({
+        tool: SAVE_TOOL,
+        interviewId: "0b6e2c1a-9d4f-4e7b-8a3c-5f2d1e0c9b8a",
+        markdown: "# Another plan",
+    });
+    await $.tool.call({
+        tool: SAVE_TOOL,
+        interviewId: INTERVIEW_ID,
+        markdown: "# Van routes",
+    });
+
+    expect(dialog.submits()).toEqual([]);
+    expect(dialog.toasts).toContain(
+        "PRD Assistant: not submitted, because Claude saved the PRD of another interview.",
+    );
+});
+
 test("a refused submit says why in a toast", async ($, on) => {
     const toasts: string[] = [];
 

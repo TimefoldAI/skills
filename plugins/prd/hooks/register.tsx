@@ -39,7 +39,7 @@ const MIDDLE_THRESHOLD = 50;
 
 let answerOpenQuestion: ((text: string) => void) | undefined;
 let isDownloadRequested = false;
-let pendingSubmitEmail: string | undefined;
+let pendingSubmit: SubmitConfirmation | undefined;
 
 const progress = atom(
     { plugin: "timefold-prd", key: "progress" } as const,
@@ -356,7 +356,7 @@ async function confirmSubmit($: EngineInterface, confirmed: SubmitConfirmation) 
 
         return;
     }
-    pendingSubmitEmail = confirmed.contactEmail;
+    pendingSubmit = confirmed;
     $.ui.toast("PRD Assistant: Claude writes the requirements document first.");
     sendAsUser($, "Please write the PRD now.");
 }
@@ -506,11 +506,17 @@ export const register: Register = (on) => {
 
         if (isSaved && server && interviewId)
             await refreshProgress($, server, interviewId);
-        if (isSaved && interviewId && pendingSubmitEmail !== undefined) {
-            const contactEmail = pendingSubmitEmail;
+        if (isSaved && interviewId && pendingSubmit !== undefined) {
+            const confirmed = pendingSubmit;
 
-            pendingSubmitEmail = undefined;
-            await submitForBuild($, interviewId, contactEmail);
+            pendingSubmit = undefined;
+            // why: the user confirmed one interview's submission, so a save of another one must not use it
+            if (confirmed.interviewId === interviewId)
+                await submitForBuild($, interviewId, confirmed.contactEmail);
+            else
+                $.ui.toast(
+                    "PRD Assistant: not submitted, because Claude saved the PRD of another interview.",
+                );
         }
         if (
             isDownloadRequested &&
