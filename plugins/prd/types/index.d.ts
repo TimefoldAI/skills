@@ -33,7 +33,7 @@ export type ModelBuild = {
 
 declare module "claude-code" {
     interface PluginState {
-        "prd": {
+        "timefold-prd": {
             progress: InterviewProgress | null;
             expandedIds: string[];
             server: string | null;

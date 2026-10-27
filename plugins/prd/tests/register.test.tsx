@@ -37,7 +37,7 @@ const PROGRESS: InterviewProgress = {
 };
 
 const PANE = {
-    plugin: "prd",
+    plugin: "timefold-prd",
     component: "Pane",
     requestId: "prd-chat",
     props: {
@@ -406,6 +406,9 @@ const SUBMITTABLE: InterviewProgress = {
     hasCurrentPrd: true,
 };
 
+const SUBMIT_PROMPT =
+    "Please submit my requirements for build now, with alice@example.com as the contact email. I confirmed the submission and the email in the requirements pane.";
+
 type McpCall = { server: string; tool: string; args: Record<string, unknown> };
 
 function answerSubmit(on: On, progress: InterviewProgress) {
@@ -420,20 +423,9 @@ function answerSubmit(on: On, progress: InterviewProgress) {
     on("mcp.call", ($, e) => {
         calls.push(e);
 
-        return e.tool === "submit_for_build"
-            ? {
-                  value: {
-                      content: [{ type: "text", text: "Submitted PRD version 1." }],
-                      isError: false,
-                  },
-              }
-            : {
-                  value: {
-                      content: [],
-                      isError: false,
-                      structuredContent: progress,
-                  },
-              };
+        return {
+            value: { content: [], isError: false, structuredContent: progress },
+        };
     });
     on("ui.open", () => ({ value: { isPlaced: true } }));
     on("ui.toast", ($, e) => {
@@ -454,7 +446,7 @@ function answerSubmit(on: On, progress: InterviewProgress) {
     };
 }
 
-test("Submit for build confirms in the pane like PRD Assistant's dialog, then hands the current PRD over with the sign-in email", async ($, on) => {
+test("Submit for build confirms in the pane like PRD Assistant's dialog, then asks Claude to submit with the sign-in email", async ($, on) => {
     const dialog = answerSubmit(on, SUBMITTABLE);
 
     await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
@@ -474,43 +466,28 @@ test("Submit for build confirms in the pane like PRD Assistant's dialog, then ha
     ).toBeDefined();
     expect(await ui.find({ key: "change-email" })).toBeUndefined();
     expect(await ui.find({ key: "submit-build" })).toBeUndefined();
-    expect(dialog.submits()).toEqual([]);
+    expect(dialog.submitted).toEqual([]);
 
     await ui.press({ key: "confirm-submit" });
 
-    expect(dialog.submits()).toEqual([
-        {
-            server: "prd-chat",
-            tool: "submit_for_build",
-            args: { interviewId: INTERVIEW_ID, contactEmail: "alice@example.com" },
-        },
-    ]);
+    expect(dialog.submitted).toEqual([SUBMIT_PROMPT]);
+    expect(dialog.submits()).toEqual([]);
     expect(dialog.toasts).toContain(
-        "PRD Assistant: submitted. Our solutions team will contact you at alice@example.com.",
+        "PRD Assistant: Claude sends your requirements to Timefold.",
     );
-    expect(dialog.submitted).toEqual([]);
     expect(await ui.find({ key: "submit-build" })).toBeDefined();
 });
 
-test("the confirmation shows while Claude's question stays open, and asks no question of its own", async ($, on) => {
+test("Submit while Claude's question is open answers it with the submit request", async ($, on) => {
     const dialog = answerSubmit(on, SUBMITTABLE);
     const questions: string[] = [];
-    let answerQuestion = (_answer: string) => {};
 
     on("tool.call", { tool: "AskUserQuestion" }, ($, e) => {
         const [question] = e.questions;
 
         questions.push(question?.question ?? "");
 
-        return new Promise((resolve) => {
-            answerQuestion = (answer) =>
-                resolve({
-                    result: {
-                        questions: e.questions,
-                        answers: { [question?.question ?? ""]: answer },
-                    },
-                });
-        });
+        return new Promise(() => {});
     });
     await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
     const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
@@ -534,13 +511,12 @@ test("the confirmation shows while Claude's question stays open, and asks no que
     expect(await ui.find({ text: "Submit for build?" })).toBeDefined();
     await ui.press({ key: "confirm-submit" });
 
-    expect(dialog.submits()).toHaveLength(1);
-    expect(questions).toEqual(["Can a driver carry only a few pizzas?"]);
-
-    answerQuestion("Yes");
     expect((await asked).result).toMatchObject({
-        answers: { "Can a driver carry only a few pizzas?": "Yes" },
+        answers: { "Can a driver carry only a few pizzas?": SUBMIT_PROMPT },
     });
+    expect(questions).toEqual(["Can a driver carry only a few pizzas?"]);
+    expect(dialog.submitted).toEqual([]);
+    expect(dialog.submits()).toEqual([]);
 });
 
 test("Cancel closes the confirmation and sends nothing", async ($, on) => {
@@ -556,84 +532,6 @@ test("Cancel closes the confirmation and sends nothing", async ($, on) => {
     expect(await ui.find({ key: "submit-build" })).toBeDefined();
     expect(dialog.submits()).toEqual([]);
     expect(dialog.submitted).toEqual([]);
-});
-
-test("without a current PRD, Submit asks Claude for the PRD and submits once it is saved", async ($, on) => {
-    const dialog = answerSubmit(on, { ...SUBMITTABLE, hasCurrentPrd: false });
-
-    on("tool.call", { tool: SAVE_TOOL }, () => ({
-        result: [],
-        text: "Saved PRD version 1 for alice@example.com.",
-    }));
-    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
-    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
-
-    await ui.press({ key: "submit-build" });
-    await ui.press({ key: "confirm-submit" });
-
-    expect(dialog.submitted).toEqual(["Please write the PRD now."]);
-    expect(dialog.submits()).toEqual([]);
-
-    await $.tool.call({
-        tool: SAVE_TOOL,
-        interviewId: INTERVIEW_ID,
-        markdown: "# Van routes",
-    });
-    await $.tool.call({
-        tool: SAVE_TOOL,
-        interviewId: INTERVIEW_ID,
-        markdown: "# Van routes, again",
-    });
-
-    expect(dialog.submits().map((call) => call.args)).toEqual([
-        { interviewId: INTERVIEW_ID, contactEmail: "alice@example.com" },
-    ]);
-});
-
-test("a refused submit says why in a toast", async ($, on) => {
-    const toasts: string[] = [];
-
-    on("tool.call", { tool: TURN_TOOL }, () => ({
-        result: [],
-        text: "Recorded.",
-    }));
-    on("mcp.call", ($, e) =>
-        e.tool === "submit_for_build"
-            ? {
-                  value: {
-                      content: [
-                          {
-                              type: "text",
-                              text: "We couldn't send your requirements. Try again in a moment.",
-                          },
-                      ],
-                      isError: true,
-                  },
-              }
-            : {
-                  value: {
-                      content: [],
-                      isError: false,
-                      structuredContent: SUBMITTABLE,
-                  },
-              },
-    );
-    on("ui.open", () => ({ value: { isPlaced: true } }));
-    on("ui.toast", ($, e) => {
-        toasts.push(e.text);
-
-        return { value: undefined };
-    });
-
-    await $.tool.call({ tool: TURN_TOOL, interviewId: INTERVIEW_ID });
-    const ui = await $.ui.mount({ ...PANE, surface: "terminal" });
-
-    await ui.press({ key: "submit-build" });
-    await ui.press({ key: "confirm-submit" });
-
-    expect(toasts).toContain(
-        "PRD Assistant: not submitted: We couldn't send your requirements. Try again in a moment.",
-    );
 });
 
 test("an older connector without the sign-in email is told apart", async ($, on) => {

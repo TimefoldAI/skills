@@ -1,5 +1,5 @@
 {
-    "name": "prd",
+    "name": "timefold-prd",
     "displayName": "Timefold PRD",
     "version": "0.4.0",
     "description": "Define the requirements of an optimization model with the Timefold PRD Assistant connector, follow the interview's checklist in a pane in Claude Code, and build the model from it.",
@@ -9,6 +9,7 @@
     },
     "homepage": "https://github.com/TimefoldAI/skills/tree/main/plugins/prd",
     "repository": "https://github.com/TimefoldAI/skills",
+    "privacyPolicyUrl": "https://timefold.ai/privacy",
     "license": "Apache-2.0",
     "keywords": [
         "timefold",

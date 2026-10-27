@@ -17,11 +17,11 @@ The plugin has two parts:
   it in the session folder, with the same file name as the website gives it, such as
   `plan-van-routes-PRD-3F9A2C.md`. **Submit for build** shows the same confirmation in the pane as
   the PRD Assistant website: "We send your requirements document, as Markdown and PDF, to our
-  solutions team", with your sign-in email as the contact email. The confirmation does not wait for
-  the question Claude asks now. When you select **Submit**, the pane sends the PRD to Timefold. If
-  Claude has not saved the PRD since your last answer, Claude writes it first, and the pane then
-  sends it. To use another contact email, ask Claude to submit for build with that email. In Claude
-  chat and Cowork, ask Claude to submit for build: Claude asks you the same question first.
+  solutions team", with your sign-in email as the contact email. When you select **Submit**, the
+  pane asks Claude to submit the PRD with that email. If Claude asks you a question at that time,
+  this request is your answer. If Claude has not saved the PRD since your last answer, Claude
+  writes it first. To use another contact email, ask Claude to submit for build with that email. In
+  Claude chat and Cowork, ask Claude to submit for build: Claude asks you the same question first.
 
 If your Timefold account can build models, the connector also has the model build tools, and the
 pane shows two more items:
@@ -44,8 +44,12 @@ In Claude Code:
 
 ```bash
 claude plugin marketplace add TimefoldAI/skills
-claude plugin install prd@timefold
+claude plugin install timefold-prd@timefold
 ```
+
+Earlier versions of the plugin had the name `prd`. The marketplace keeps that name for the same
+plugin, so `prd@timefold` keeps working and gets the same updates. Install only one of the two
+names.
 
 Then ask Claude to "help me define the requirements for my delivery routing". The pane opens
 when the interview starts, if the terminal is at least 144 columns wide. Run `/prd-panel` to
@@ -57,25 +61,34 @@ The pane reads the interview's progress with one extra call to the connector, th
 `get_interview_progress`. The mod makes this call in the background after each interview step,
 not Claude, so no conversation stands behind it. In auto mode, the permission classifier then
 gives no verdict and refuses the call, and in the other modes you would get a permission prompt
-after each step. When you confirm **Submit for build** in the pane, the mod also calls
-`submit_for_build` itself, for the same reason.
+after each step.
 
-So the mod approves these two calls itself, through a `tool.check` hook (see
+So the mod approves this one call itself, through a `tool.check` hook (see
 [Extend permissions with hooks](https://code.claude.com/docs/en/permissions#extend-permissions-with-hooks)):
 
-- It approves only a tool whose name ends in `__get_interview_progress`, or in
-  `__submit_for_build`. The pane calls `submit_for_build` only after you select **Submit** in its
-  confirmation, and that selection is your consent.
+- It approves only a tool whose name ends in `__get_interview_progress`.
 - It approves only the calls the mod itself makes (`next.origin.plugin` is this plugin). When
   Claude calls the same tool, the usual permission decision applies.
 - It approves nothing else. Every other tool call goes to your rules, your hooks and your
   permission mode as before.
 
-Both tools work only on your own interview: the connector refuses an interview that belongs to
-another user. Deny rules from your organization's managed settings still hold over the mod.
+The mod never calls `submit_for_build`. When you confirm **Submit for build** in the pane, the mod
+sends your request to Claude, and Claude calls the tool. Your usual permission decision applies to
+that call.
+
+The connector refuses an interview that belongs to another user, so the tool works only on your
+own interview. Deny rules from your organization's managed settings still hold over the mod.
 
 To see what the mod hooks and calls before you install it, run
 `claude plugin validate plugins/prd` in a clone of this repository.
+
+## Privacy
+
+The connector stores your interview at Timefold: the email address of your Timefold account, each
+question and your answer to it, and every version of the PRD. **Submit for build** sends the PRD
+to Timefold's solutions team. The
+[PRD Assistant terms of use](https://timefold.ai/prd-assistant-terms-of-use) and the
+[Timefold Privacy Policy](https://timefold.ai/privacy) apply.
 
 ## Develop
 

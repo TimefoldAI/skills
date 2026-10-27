@@ -35,7 +35,7 @@ change your dataset.
 | Plugin                 | Purpose                                                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `timefold-skills`      | The skills above, as one Claude Code plugin                                                                                    |
-| [`prd`](./plugins/prd) | Define the requirements of an optimization model with the Timefold PRD Assistant connector, with a requirements pane in Claude Code |
+| [`timefold-prd`](./plugins/prd) | Define the requirements of an optimization model with the Timefold PRD Assistant connector, with a requirements pane in Claude Code |
 
 ## Installation
 
@@ -160,9 +160,9 @@ reads, and `skills/explain-dataset-shared/VERSION`, which the skills read for th
 metadata. Both are needed, because `npx skills add` copies the skill folders without the plugin
 manifest. Keep them in sync.
 
-The `prd` plugin has its own version in `plugins/prd/.claude-plugin/plugin.json`. A second
-workflow, `bump-prd-plugin-version.yml`, bumps its minor version each time `plugins/prd/` changes
-on `main`.
+The `timefold-prd` plugin has its own version in `plugins/prd/.claude-plugin/plugin.json`. A
+second workflow, `bump-prd-plugin-version.yml`, bumps its minor version each time `plugins/prd/`
+changes on `main`.
 
 ## Documentation
 
