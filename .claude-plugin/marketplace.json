@@ -11,7 +11,7 @@
       "description": "Skills for users of Timefold models: explain an optimized dataset, find out why work is unassigned, and interpret the optimization decisions."
     },
     {
-      "name": "prd",
+      "name": "timefold-prd",
       "source": "./plugins/prd",
       "description": "Define the requirements of an optimization model with the Timefold PRD Assistant connector, follow the interview checklist in a Claude Code pane, and build the model from it."
     }
