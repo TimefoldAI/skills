@@ -47,8 +47,9 @@ claude plugin marketplace add TimefoldAI/skills
 claude plugin install timefold-prd@timefold
 ```
 
-Earlier versions of the plugin had the name `prd`. If you installed it with that name, remove it
-first: `claude plugin uninstall prd@timefold`.
+Earlier versions of the plugin had the name `prd`. The marketplace keeps that name for the same
+plugin, so `prd@timefold` keeps working and gets the same updates. Install only one of the two
+names.
 
 Then ask Claude to "help me define the requirements for my delivery routing". The pane opens
 when the interview starts, if the terminal is at least 144 columns wide. Run `/prd-panel` to
