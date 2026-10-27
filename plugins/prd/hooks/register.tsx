@@ -39,6 +39,7 @@ const MIDDLE_THRESHOLD = 50;
 
 let answerOpenQuestion: ((text: string) => void) | undefined;
 let isDownloadRequested = false;
+let pendingSubmitEmail: string | undefined;
 
 const progress = atom(
     { plugin: "timefold-prd", key: "progress" } as const,
@@ -292,8 +293,38 @@ async function downloadReport(
         );
 }
 
-function submitPrompt(contactEmail: string) {
-    return `Please submit my requirements for build now, with ${contactEmail} as the contact email. I confirmed the submission and the email in the requirements pane.`;
+function resultText(result: McpToolResult) {
+    return result.content
+        .map((block) => (block.type === "text" ? (block.text ?? "") : ""))
+        .join(" ")
+        .trim();
+}
+
+async function submitForBuild(
+    $: EngineInterface,
+    interviewId: string,
+    contactEmail: string,
+) {
+    const server = await read($, interviewServer);
+
+    if (server === null) {
+        $.ui.toast("PRD Assistant: the interview's connector is not known yet.");
+
+        return;
+    }
+    $.ui.toast("PRD Assistant: sending your requirements to Timefold.");
+    const result = await $.mcp
+        .call(server, "submit_for_build", { interviewId, contactEmail })
+        .catch((error: unknown) => ({
+            content: [{ type: "text" as const, text: String(error) }],
+            isError: true,
+        }));
+
+    $.ui.toast(
+        result.isError
+            ? `PRD Assistant: not submitted: ${resultText(result)}`
+            : `PRD Assistant: submitted. Our solutions team will contact you at ${contactEmail}.`,
+    );
 }
 
 // why: the confirmation is drawn in the pane, not with $.ui.ask, which waits behind the interview's open question
@@ -314,14 +345,20 @@ async function openConfirmation(
     }));
 }
 
-// why: Claude makes the submit_for_build call, so the user's own permission rules decide it, not this mod
+// why: Submit in PRD Assistant's confirmation is the user's consent to the handoff
 async function confirmSubmit($: EngineInterface, confirmed: SubmitConfirmation) {
     const interview = await read($, progress);
 
     await update($, confirmation, () => null);
     if (interview?.interviewId !== confirmed.interviewId) return;
-    $.ui.toast("PRD Assistant: Claude sends your requirements to Timefold.");
-    sendAsUser($, submitPrompt(confirmed.contactEmail));
+    if (interview.hasCurrentPrd) {
+        await submitForBuild($, interview.interviewId, confirmed.contactEmail);
+
+        return;
+    }
+    pendingSubmitEmail = confirmed.contactEmail;
+    $.ui.toast("PRD Assistant: Claude writes the requirements document first.");
+    sendAsUser($, "Please write the PRD now.");
 }
 
 async function refreshBuildPhases($: EngineInterface, server: string) {
@@ -396,6 +433,17 @@ export const register: Register = (on) => {
                   }
                 : next(e),
     );
+    on(
+        "tool.check",
+        { tool: /^mcp__.+__submit_for_build$/ },
+        ($, e, next) =>
+            next.origin.plugin === $.plugin.name
+                ? {
+                      decision: "allow",
+                      reason: "The user confirmed Submit for build and the contact email in the PRD Assistant pane.",
+                  }
+                : next(e),
+    );
     on("session.start", async ($, e, next) => {
         await $.command.register({
             name: "prd-panel",
@@ -458,6 +506,12 @@ export const register: Register = (on) => {
 
         if (isSaved && server && interviewId)
             await refreshProgress($, server, interviewId);
+        if (isSaved && interviewId && pendingSubmitEmail !== undefined) {
+            const contactEmail = pendingSubmitEmail;
+
+            pendingSubmitEmail = undefined;
+            await submitForBuild($, interviewId, contactEmail);
+        }
         if (
             isDownloadRequested &&
             isSaved &&
