@@ -1,10 +1,11 @@
-# Bumps the plugin versions on next and main, and publishes main to TimefoldAI/skills.
+# Bumps the plugin versions on next and main, publishes main to TimefoldAI/skills, and merges
+# main back into next.
 #
 # The private TimefoldAI/skills-internal is the source repository. Its main branch is a copy of
 # the public repository, so the public repository receives this file too. The job checks that
 # it runs in the source repository, and does nothing in the public one.
 #
-# The scripts in .github/scripts explain the version rules and the publish.
+# The scripts in .github/scripts explain the version rules, the publish, and the merge back.
 
 name: Bump versions and publish
 
@@ -13,8 +14,8 @@ on:
     branches:
       - next
       - main
-  # why: a schedule or a manual run works on main. It bumps what a failed run missed and
-  # publishes again, for example after the deploy key was set.
+  # why: a schedule or a manual run works on main. It bumps what a failed run missed, publishes
+  # again, and merges main into next, for example after the deploy key was set.
   schedule:
     - cron: '17 5 * * *'
   workflow_dispatch:
@@ -39,12 +40,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      # why: the bump script checks out the newest commit of the branch, which can change the
-      # script file while bash reads it. Run a copy.
+      # why: the scripts check out other commits of the branches, which can change a script file
+      # while bash reads it. Run copies.
+      - name: Copy the scripts
+        run: cp .github/scripts/*.sh "$RUNNER_TEMP/"
+
       - name: Bump the versions of the changed plugins
-        run: |
-          cp .github/scripts/bump-versions.sh "$RUNNER_TEMP/"
-          bash "$RUNNER_TEMP/bump-versions.sh"
+        run: bash "$RUNNER_TEMP/bump-versions.sh"
 
       # Publishes HEAD: the commit that the bump step checked and pushed. A newer push gets its
       # own run.
@@ -52,4 +54,16 @@ jobs:
         if: env.BRANCH == 'main'
         env:
           DEPLOY_KEY: ${{ secrets.PUBLIC_REPO_DEPLOY_KEY }}
-        run: bash .github/scripts/publish-main.sh
+        run: bash "$RUNNER_TEMP/publish-main.sh"
+
+      # A release or a hotfix is a squash commit that next does not have. A push with the
+      # built-in token starts no workflow, so this job also runs the bump on next.
+      - name: Merge main into next
+        if: env.BRANCH == 'main'
+        run: bash "$RUNNER_TEMP/sync-next.sh"
+
+      - name: Bump the versions on next
+        if: env.BRANCH == 'main'
+        env:
+          BRANCH: next
+        run: bash "$RUNNER_TEMP/bump-versions.sh"

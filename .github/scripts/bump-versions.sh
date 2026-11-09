@@ -7,7 +7,7 @@
 #
 # - On next, changed content gets a new minor version. Internal testers install from next,
 #   so they get each change.
-# - On main, a release (a merge of next) brings its version from next. Nothing to bump.
+# - On main, a release (a squash merge of next) brings its version from next. Nothing to bump.
 #   A hotfix that does not change the version gets a new patch version.
 #
 # The script looks at the state of the branch, not at the commits of one push. GitHub can drop a
@@ -95,7 +95,9 @@ for attempt in 1 2 3 4 5; do
   if [ ${#bumped[@]} -eq 0 ]; then
     exit 0
   fi
-  git commit --quiet -m "chore: bump plugin version: ${bumped[*]} [skip ci]"
+  # why: no [skip ci]. A push with the built-in token starts no workflow anyway, and the marker
+  # in a squashed release would stop the publish.
+  git commit --quiet -m "chore: bump plugin version: ${bumped[*]}"
   if git push --quiet origin "HEAD:$branch"; then
     exit 0
   fi

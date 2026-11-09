@@ -69,9 +69,10 @@ To go back to the public version, remove the marketplace again and add `Timefold
 
 ### Release
 
-Open a pull request from `next` to `main`, and merge it with **Create a merge commit**. Do not
-squash it: a squash merge gives `main` a commit that `next` does not have. The release brings
-the versions from `next`, and the workflow publishes `main` here.
+Open a pull request from `next` to `main`, and squash it. The repository allows only squash
+merges, so the history of `main` has one commit for each release and each hotfix. The release
+brings the versions from `next`, and the workflow publishes `main` here. Then the workflow
+merges `main` back into `next`, so that the next release starts from this one.
 
 A release takes everything that is on `next`. Merge into `next` only what you expect to
 release within about a week. Keep a change that needs a longer test on its own branch, and
@@ -79,16 +80,19 @@ test it with `--plugin-dir`.
 
 ### Hotfix
 
-1. Make a branch from `main`, and open a pull request against `main`. The workflow gives the
-   plugin a new patch version and publishes it.
-2. Merge `main` into `next` with a merge commit. If the version lines conflict, keep the
-   version of `next`.
+Make a branch from `main`, and open a pull request against `main`. The workflow gives the
+plugin a new patch version, publishes it, and merges `main` into `next`. In the version files,
+the merge keeps the version of `next`, and `next` then gets a new minor version with the fix.
+
+If the fix and a change on `next` changed the same lines, the merge into `next` stops and
+changes nothing. Then merge `main` into `next` by hand, keep the version of `next` in the
+version files, and push the merge commit to `next`.
 
 ### Rules
 
-- **Everything on `next` becomes public**, with its full git history. A file that you delete
-  before the release is still in the history. Never commit customer data, API keys, internal
-  URLs, or other internal content, also not on `next`.
+- **Everything on `next` becomes public at the next release.** A release publishes the content
+  of `next`, not its commit history. Still, never commit customer data, API keys, internal URLs,
+  or other internal content: a release can take it before someone removes it.
 - Keep each skill self-contained, and keep the shared workflow model-agnostic.
 
 ### How the publish works
@@ -96,5 +100,5 @@ test it with `--plugin-dir`.
 `.github/workflows/bump-and-publish.yml` runs in the private repository only. It bumps the
 versions on `next` and `main`, and pushes `main` to this repository with a deploy key. The key
 is the secret `PUBLIC_REPO_DEPLOY_KEY` in the private repository, and its public half is a
-deploy key with write access in this repository. A daily run on `main` bumps what a failed run
-missed and publishes again.
+deploy key with write access in this repository. Then it merges `main` into `next`. A daily run
+on `main` repeats what a failed run missed.
