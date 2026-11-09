@@ -24,6 +24,77 @@ guidance about a model costs a user more than no skill at all.
 
 ## For Timefold employees
 
-Work in a branch of this repository and open a pull request against `main`. You need write
-access to the repository for this. Keep each skill self-contained, and keep the shared workflow
-model-agnostic.
+We develop the skills in the private repository
+[TimefoldAI/skills-internal](https://github.com/TimefoldAI/skills-internal) and test them
+internally first. This public repository is a copy of its `main` branch: a workflow pushes
+`main` here after each change. Issues stay in this repository.
+
+Do not push, merge, or edit files in this repository. The publish is a fast-forward push, so a
+commit made here stops every publish until someone brings it into the private repository.
+
+### Branches
+
+| Branch | What it holds                                         | Who installs it                    |
+| ------ | ----------------------------------------------------- | ---------------------------------- |
+| `next` | Changes in internal test. The default branch.         | Timefold employees who test skills |
+| `main` | Released changes. The workflow publishes them here.   | Everyone, from this repository     |
+
+### Make a change
+
+1. Make a branch from `next`, and open a pull request against `next`. To try the change before
+   the merge, start Claude Code with `claude --plugin-dir <your clone>` (the `timefold-skills`
+   plugin) or `claude --plugin-dir <your clone>/plugins/prd`.
+2. Merge the pull request. The workflow gives the changed plugin a new minor version on `next`,
+   so the testers get the change on their next plugin update.
+
+### Test the internal version
+
+The `next` branch has the same marketplace name as this repository, `timefold`. Replace the
+public marketplace with it. The install commands stay the same, and you cannot install the
+public and the internal skills at the same time by mistake.
+
+```bash
+claude plugin marketplace remove timefold   # this also uninstalls its plugins
+claude plugin marketplace add TimefoldAI/skills-internal#next
+claude plugin install timefold-skills@timefold
+claude plugin install timefold-prd@timefold  # if you use it
+```
+
+The repository is private, so git on your machine needs access to it: a GitHub SSH key in
+`ssh-agent`, or `gh auth login` and then `gh auth setup-git`. To get updates, turn on
+auto-update for `timefold` under **Marketplaces** in `/plugin`, or run
+`claude plugin marketplace update timefold`.
+
+To go back to the public version, remove the marketplace again and add `TimefoldAI/skills`.
+
+### Release
+
+Open a pull request from `next` to `main`, and merge it with **Create a merge commit**. Do not
+squash it: a squash merge gives `main` a commit that `next` does not have. The release brings
+the versions from `next`, and the workflow publishes `main` here.
+
+A release takes everything that is on `next`. Merge into `next` only what you expect to
+release within about a week. Keep a change that needs a longer test on its own branch, and
+test it with `--plugin-dir`.
+
+### Hotfix
+
+1. Make a branch from `main`, and open a pull request against `main`. The workflow gives the
+   plugin a new patch version and publishes it.
+2. Merge `main` into `next` with a merge commit. If the version lines conflict, keep the
+   version of `next`.
+
+### Rules
+
+- **Everything on `next` becomes public**, with its full git history. A file that you delete
+  before the release is still in the history. Never commit customer data, API keys, internal
+  URLs, or other internal content, also not on `next`.
+- Keep each skill self-contained, and keep the shared workflow model-agnostic.
+
+### How the publish works
+
+`.github/workflows/bump-and-publish.yml` runs in the private repository only. It bumps the
+versions on `next` and `main`, and pushes `main` to this repository with a deploy key. The key
+is the secret `PUBLIC_REPO_DEPLOY_KEY` in the private repository, and its public half is a
+deploy key with write access in this repository. A daily run on `main` bumps what a failed run
+missed and publishes again.
