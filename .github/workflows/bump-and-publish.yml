@@ -1,0 +1,55 @@
+# Bumps the plugin versions on next and main, and publishes main to TimefoldAI/skills.
+#
+# The private TimefoldAI/skills-internal is the source repository. Its main branch is a copy of
+# the public repository, so the public repository receives this file too. The job checks that
+# it runs in the source repository, and does nothing in the public one.
+#
+# The scripts in .github/scripts explain the version rules and the publish.
+
+name: Bump versions and publish
+
+on:
+  push:
+    branches:
+      - next
+      - main
+  # why: a schedule or a manual run works on main. It bumps what a failed run missed and
+  # publishes again, for example after the deploy key was set.
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  bump-and-publish:
+    if: github.repository == 'TimefoldAI/skills-internal'
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: ${{ github.event_name == 'push' && github.ref_name || 'main' }}
+    # One run per branch at a time, so the bump and the publish see the same commits. GitHub
+    # drops a waiting run when a newer one comes in. The bump looks at the branch state, so
+    # the newer run also covers the changes of the dropped one.
+    concurrency:
+      group: bump-and-publish-${{ github.event_name == 'push' && github.ref_name || 'main' }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # why: the bump script checks out the newest commit of the branch, which can change the
+      # script file while bash reads it. Run a copy.
+      - name: Bump the versions of the changed plugins
+        run: |
+          cp .github/scripts/bump-versions.sh "$RUNNER_TEMP/"
+          bash "$RUNNER_TEMP/bump-versions.sh"
+
+      # Publishes HEAD: the commit that the bump step checked and pushed. A newer push gets its
+      # own run.
+      - name: Push main to TimefoldAI/skills
+        if: env.BRANCH == 'main'
+        env:
+          DEPLOY_KEY: ${{ secrets.PUBLIC_REPO_DEPLOY_KEY }}
+        run: bash .github/scripts/publish-main.sh
